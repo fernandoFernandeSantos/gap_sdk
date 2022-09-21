@@ -5,7 +5,7 @@
 #include "rt/rt_api.h"
 
 #define NOGPIO
-#define BYTE 
+#define BYTE
 
 
 #define ITERATIONS 100
@@ -16,38 +16,38 @@
 #define FREQ_CL (175*1000000)
 
 
-#define Wi  112  
-#define Hi  112  
-#define Wic 100  
-#define Hic 100  
+#define Wi  112
+#define Hi  112
+#define Wic 100
+#define Hic 100
 #define Wil 1024
-#define Hil 16   
+#define Hil 16
 
 #define Wxor    100
 #define Hxor    100
 
-char tests_names[][50]={
-{"2x2/2 Max Pool"},
-{"2x2/2 Avg Pool"},
-{"5x5 Convolutions"},
-{"Linear"},
-{"Xnor Conv 5x5"},
+char tests_names[][50] = {
+        {"2x2/2 Max Pool"},
+        {"2x2/2 Avg Pool"},
+        {"5x5 Convolutions"},
+        {"Linear"},
+        {"Xnor Conv 5x5"},
 
-{"2x2/2 Max Pool Vect"},
-{"2x2/2 Avg Pool Vect"},
-{"5x5 Convolutions Vect"},
-{"LinearVect"},
+        {"2x2/2 Max Pool Vect"},
+        {"2x2/2 Avg Pool Vect"},
+        {"5x5 Convolutions Vect"},
+        {"LinearVect"},
 
-{"2x2/2 Parallel Max Pool"},
-{"2x2/2 Parallel Avg Pool"},
-{"Parallel 5x5 Convolution"},
-{"Parallel Linear"},
-{"Parallel Xnor Conv 5x5"},
+        {"2x2/2 Parallel Max Pool"},
+        {"2x2/2 Parallel Avg Pool"},
+        {"Parallel 5x5 Convolution"},
+        {"Parallel Linear"},
+        {"Parallel Xnor Conv 5x5"},
 
-{"2x2/2 Parallel Max Pool Vect"},
-{"2x2/2 Parallel Avg Pool Vect"},
-{"Parallel Convolution Vect"},
-{"Parallel Linear Vect"}
+        {"2x2/2 Parallel Max Pool Vect"},
+        {"2x2/2 Parallel Avg Pool Vect"},
+        {"Parallel Convolution Vect"},
+        {"Parallel Linear Vect"}
 };
 
 int test_input_w[]={Wi,Wi,Wi,Wil,Wxor};
@@ -71,11 +71,11 @@ int tests_input[][2]={
 };
 
 
-char tests_titles[][50]={
-{"Sequential"},
-{"Vector"},
-{"Parallel"},
-{"Parallel Vector"},
+char tests_titles[][50] = {
+        {"Sequential"},
+        {"Vector"},
+        {"Parallel"},
+        {"Parallel Vector"},
 };
 
 
@@ -151,17 +151,15 @@ int test_num[TOT_TEST]={5,4,5,4};
 static int CoreCountDynamic = 0;
 static int ActiveCore = 8;
 
-static inline unsigned int __attribute__((always_inline)) ChunkSize(unsigned int X)
+static inline unsigned int __attribute__((always_inline)) ChunkSize(unsigned int X) {
+    unsigned int NCore;
+    unsigned int Log2Core;
+    unsigned int Chunk;
 
-{
-        unsigned int NCore;
-        unsigned int Log2Core;
-        unsigned int Chunk;
-
-        if (CoreCountDynamic) NCore = ActiveCore; else NCore = gap8_ncore();
-        Log2Core = gap8_fl1(NCore);
-        Chunk = (X>>Log2Core) + ((X&(NCore-1))!=0);
-        return Chunk;
+    if (CoreCountDynamic) NCore = ActiveCore; else NCore = gap8_ncore();
+    Log2Core = gap8_fl1(NCore);
+    Chunk = (X >> Log2Core) + ((X & (NCore - 1)) != 0);
+    return Chunk;
 }
 #endif
 
@@ -184,11 +182,11 @@ ClusterArg_t Arg;
 
 char str[100];
 static char *float_to_string(float in){
-     
-    int d1 = in;                
-    float f2 = in - d1;         
-    int d2 = trunc(f2 * 10000); 
- 
+
+    int d1 = in;
+    float f2 = in - d1;
+    int d2 = trunc(f2 * 10000);
+
     sprintf (str, "%d.%04d", d1, d2);
     return str;
 }
@@ -267,7 +265,7 @@ void __attribute__ ((noinline)) MaxPoolingVect(Ty *__restrict__ In, int W, int H
 
 {
 	int Wo=W/2, Ho=H/2;
-	for (int c=0; c<Wo; c++) 
+	for (int c=0; c<Wo; c++)
 		for (int l=0; l<Ho; l++) {
 			v4s V0 = (v4s)(int)(*((short *)(In+2*l*W+2*c))), V1 = (v4s)(int)(*((short *)(In+(2*l+1)*W+2*c)));
 			V0 = gap8_max4(V0, V1);
@@ -301,7 +299,7 @@ void __attribute__ ((noinline)) AvgPoolingVect(Ty *__restrict__ In, int W, int H
 
 {
 	int Wo=W/2, Ho=H/2;
-	for (int c=0; c<Wo; c++) 
+	for (int c=0; c<Wo; c++)
 		for (int l=0; l<Ho; l++) {
 			v4s V0 = (v4s)(int)(*((short *)(In+2*l*W+2*c))), V1 = (v4s)(int)(*((short *)(In+(2*l+1)*W+2*c)));
 			V0 = __builtin_shuffle(V0, V1, (v4s){0,1,4,5});
@@ -468,7 +466,7 @@ void __attribute__ ((noinline)) MaxPoolingVect(Ty *__restrict__ In, int W, int H
 
 {
 	int Wo=W/2, Ho=H/2;
-	for (int c=0; c<Wo; c++) 
+	for (int c=0; c<Wo; c++)
 		for (int l=0; l<Ho; l++) {
 			v2s V0 = *((v2s *)(In+2*l*W+2*c)), V1 = *((v2s *)(In+(2*l+1)*W+2*c));
 			V0 = gap8_max2(V0, V1);
@@ -501,7 +499,7 @@ void __attribute__ ((noinline)) AvgPoolingVect(Ty *__restrict__ In, int W, int H
 
 {
 	int Wo=W/2, Ho=H/2;
-	for (int c=0; c<Wo; c++) 
+	for (int c=0; c<Wo; c++)
 		for (int l=0; l<Ho; l++) {
 			v2s V0 = *((v2s *)(In+2*l*W+2*c)), V1 = *((v2s *)(In+(2*l+1)*W+2*c));
 			int R=gap8_dotp2(V0, ((v2s){1,1}));
@@ -850,8 +848,8 @@ void __attribute__ ((noinline)) MaxPooling(Ty *__restrict__ In, int W, int H, Ty
 
 {
 	int Wo=W/2, Ho=H/2;
-	for (int c=0; c<Wo; c++) 
-		for (int l=0; l<Ho; l++) 
+	for (int c=0; c<Wo; c++)
+		for (int l=0; l<Ho; l++)
 			Out[l*Wo+c] = Max(Max(In[2*l*W+2*c], In[2*l*W + 2*c+1]), Max(In[(2*l+1)*W+2*c], In[(2*l+1)*W + 2*c+1]));
 }
 
@@ -859,8 +857,8 @@ void __attribute__ ((noinline)) AvgPooling(Ty *__restrict__ In, int W, int H, Ty
 
 {
 	int Wo=W/2, Ho=H/2;
-	for (int c=0; c<Wo; c++) 
-		for (int l=0; l<Ho; l++) 
+	for (int c=0; c<Wo; c++)
+		for (int l=0; l<Ho; l++)
 			Out[l*Wo+c] = (In[2*l*W+2*c]+In[2*l*W + 2*c+1]+In[(2*l+1)*W+2*c]+In[(2*l+1)*W + 2*c+1])>>2;
 }
 
@@ -1233,28 +1231,27 @@ int benchmarks(ClusterArg_t * ArgC){
     char* Mode             = ArgC->Mode;
     int   Trace            = ArgC->Trace;
     int   NumIter          = ArgC->Iter;
-    
+
     RunTest(test_num, NumIter, Trace, Mode, &(ArgC->Iter_operations));
-        
+
     return 0;
 }
 
 
-int main()
-{
+int main() {
     long start_time, end_time;
-    long int tot_time, op_num,kernel_op_num;
-    float res,res_kernel;
-    int cur_test=0;
+    long int tot_time, op_num, kernel_op_num;
+    float res, res_kernel;
+    int cur_test = 0;
 
-    #if !ALIM_1_VOLT
-    PMU_set_voltage(1150,0);
-    PMU_set_voltage(1200,0);
-    #else
+#if !ALIM_1_VOLT
+    PMU_set_voltage(1150, 0);
+    PMU_set_voltage(1200, 0);
+#else
     PMU_set_voltage(1000,0);
-    #endif
+#endif
 
-    #ifndef NOGPIO
+#ifndef NOGPIO
     rt_padframe_profile_t *profile_gpio = rt_pad_profile_get("hyper_gpio");
 
     if (profile_gpio == NULL) {
@@ -1266,52 +1263,53 @@ int main()
     rt_gpio_init(0, GPIO);
     rt_gpio_set_dir(0, 1<<GPIO, RT_GPIO_IS_OUT);
 
-    #endif 
+#endif
 
-    printf("\n\n");
-    printf("                      --------------------------------------------------------\n");
-    printf("                      --------------------------------------------------------\n");
-    printf("                      ---------------   GAP8 benchmarks   --------------------\n");
-    printf("                      --------------------------------------------------------\n");
-    printf("                      --------------------------------------------------------\n\n\n");
+//    printf("\n\n");
+//    printf("--------------------------------------------------------\n");
+//    printf("--------------------------------------------------------\n");
+//    printf("---------------   GAP8 benchmarks   --------------------\n");
+//    printf("--------------------------------------------------------\n");
+//    printf("--------------------------------------------------------\n\n\n");
+//
 
+//    printf("Gap8 Input Voltage    : %s\n", ALIM_1_VOLT ? "1.0 Volt" : "1.2 Volts");
+//    printf("Fabric Controller Freq: %d MhZ\n", FREQ_FC / 1000000);
+//    printf("Cluster  Freq         : %d MhZ\n\n\n", FREQ_CL / 1000000);
+//
+//    printf("Number of iterations for each benchmark: %d\n\n\n", ITERATIONS);
 
-    printf("Gap8 Input Voltage    : %s\n",ALIM_1_VOLT?"1.0 Volt":"1.2 Volts");
-    printf("Fabric Controller Freq: %d MhZ\n", FREQ_FC/1000000);
-    printf("Cluster  Freq         : %d MhZ\n\n\n", FREQ_CL/1000000);
-    
-    printf("Number of iterations for each benchmark: %d\n\n\n", ITERATIONS);
-    
 
     if (rt_event_alloc(NULL, 8)) return -1;
 
     rt_cluster_mount(MOUNT, CID, 0, NULL);
-    
+
     //Set Fabric Controller and Cluster Frequencies
     rt_freq_set(RT_FREQ_DOMAIN_FC, FREQ_FC);
     rt_freq_set(RT_FREQ_DOMAIN_CL, FREQ_CL);
-    
-    for(int j=0; j < TOT_TEST; j++ ){
-        printf("\n                      ---------------   %15s   ---------------\n",tests_titles[j]);
-        for(int i=0; i < test_num[j]; i++ ){
 
-            Arg.test_num        = cur_test++;  
-            Arg.Iter            = ITERATIONS;
-            Arg.Trace           = ENABLE_CYCLE_TRACE;
-            #ifdef BYTE
-            strcpy(Arg.Mode,"Byte");
-            #else
+    for (int j = 0; j < TOT_TEST; j++) {
+        printf("\n---------------   %15s   ---------------\n", tests_titles[j]);
+        for (int i = 0; i < test_num[j]; i++) {
+
+            Arg.test_num = cur_test++;
+            Arg.Iter = ITERATIONS;
+            Arg.Trace = ENABLE_CYCLE_TRACE;
+#ifdef BYTE
+            strcpy(Arg.Mode, "Byte");
+#else
             strcpy(Arg.Mode,"Short");
-            #endif
+#endif
 
             start_time = rt_time_get_us();
             rt_cluster_call(NULL, CID, (void *) benchmarks, &Arg, NULL, 0, 0, 8, NULL);
             end_time = rt_time_get_us();
-            
-            tot_time = end_time-start_time;
-            op_num   = Arg.Iter_operations;
-            
-            printf ("%30s Input: %dx%d (x%d iterations) Time: %10ld uSec. Cycles: %10ld\n",tests_names[i], test_input_w[i],test_input_h[i], ITERATIONS, tot_time, op_num);
+
+            tot_time = end_time - start_time;
+            op_num = Arg.Iter_operations;
+
+            printf("%30s Input: %dx%d (x%d iterations) Time: %10ld uSec. Cycles: %10ld\n", tests_names[i],
+                   test_input_w[i], test_input_h[i], ITERATIONS, tot_time, op_num);
 
         }
     }
