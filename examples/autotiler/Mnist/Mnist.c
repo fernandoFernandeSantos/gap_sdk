@@ -14,6 +14,7 @@
 #include "Gap.h"
 #include "MnistKernels.h"
 #include "MnistCoeffs.h"
+#include "../performance_counter.h"
 
 #if defined(ENABLE_BRIDGE)
 #include "ImgIO.h"
@@ -137,7 +138,8 @@ static void RunMnist(void *arg)
 
 void test_mnist(void)
 {
-    printf("Entering main controller\n");
+//    printf("Entering main controller\n");
+    start_counters();
 
     uint8_t CheckResults = 0;
     uint32_t errors = 0;
@@ -258,6 +260,7 @@ void test_mnist(void)
     errors = (rec_digit != (uint8_t) GoldenOutput);
     #endif /* defined(ENABLE_BRIDGE) */
 
+    end_counters();
     printf("\nTest %s with %d error(s) !\n", (errors) ? "failed" : "success", errors);
 
     if(errors) pmsis_exit(-9);
@@ -266,6 +269,6 @@ void test_mnist(void)
 
 int main()
 {
-    printf("\n\n\t *** PMSIS Mnist Test ***\n\n");
+//    printf("\n\n\t *** PMSIS Mnist Test ***\n\n");
     return pmsis_kickoff((void *) test_mnist);
 }

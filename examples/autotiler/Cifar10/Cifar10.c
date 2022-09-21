@@ -199,7 +199,7 @@ void test_cifar10(void)
 {
     DEBUG_PRINTF("Entering main controller\n");
     /* Check Results can works when only the output of Layer0 is in L2 */
-    uint8_t CheckResults = 0;
+    uint8_t CheckResults = 1;
 
     /* Output result size. */
     Out_Layer_Size[0] = (14 * 14 * sizeof(int16_t) * 8);

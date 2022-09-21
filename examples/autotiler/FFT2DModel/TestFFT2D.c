@@ -14,6 +14,8 @@
 #include "TwiddlesDef.h"
 #include "SwapTablesDef.h"
 
+#include "../performance_counter.h"
+
 #define DIM 256
 #ifdef STACK_SIZE
 #undef STACK_SIZE
@@ -26,6 +28,8 @@
 PI_L2 unsigned char *ImageIn;
 PI_L2 int *Out;
 PI_L2 unsigned char done = 0;
+
+int golden[DIM*DIM];
 
 void Process()
 
@@ -70,8 +74,8 @@ static void end_of_app(){
 void fft_2d(void)
 
 {
-    printf("FC Launched\n");
-
+//    printf("FC Launched\n");
+    start_counters();
     // Configure and open cluster
 
     struct pi_device cluster_dev;
@@ -120,6 +124,6 @@ void fft_2d(void)
 
 int main()
 {
-    printf("\n\n\t *** PMSIS FFT 2D Autotiler Test ***\n\n");
+//    printf("\n\n\t *** PMSIS FFT 2D Autotiler Test ***\n\n");
     return pmsis_kickoff((void *) fft_2d);
 }

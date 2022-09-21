@@ -13,11 +13,15 @@
 #include "Gap.h"
 #include "ResizeKernels.h"
 
+#include "../performance_counter.h"
+
 #define STACK_SIZE ( 1024 * 2 )
 #define CID        ( 0 )
 
 #define IMAGE_W    ( 322 )
 #define IMAGE_H    ( 242 )
+
+#define NO_BRIDGE 1
 
 #if defined(NO_BRIDGE)
 #include "golden.h"
@@ -39,7 +43,7 @@ typedef struct ArgCluster
 
 static void cluster_main(ArgCluster_T *ArgC)
 {
-    printf ("cluster master start\n");
+//    printf ("cluster master start\n");
 
     /* Launching resize on cluster. */
     ResizeImage(ArgC->ImageIn, ArgC->ImageOut);
@@ -47,7 +51,8 @@ static void cluster_main(ArgCluster_T *ArgC)
 
 void run_Bilinear_Resize(void)
 {
-    printf("Entering main controller\n");
+//    printf("Entering main controller\n");
+    start_counters();
     uint32_t errors = 0;
 
     /* Input image size. */
@@ -124,15 +129,16 @@ void run_Bilinear_Resize(void)
 
     pi_l1_free(&cluster_dev, Resize_L1_Memory, _Resize_L1_Memory_SIZE);
 
-    printf("Close cluster after end of computation.\n");
+//    printf("Close cluster after end of computation.\n");
     pi_cluster_close(&cluster_dev);
-
+//    ImageOut[34] = 333;
     #if defined(NO_BRIDGE)
     /* check output with golden for regressions. */
     for (uint32_t i = 0; i < (w_out * h_out); i++)
     {
         if (ImageOut[i] != ImageOut_golden[i])
         {
+            printf("Error:[%d]=%d != %d\n", i, ImageOut[i], ImageOut_golden[i]);
             errors++;
         }
     }
@@ -141,6 +147,7 @@ void run_Bilinear_Resize(void)
     WriteImageToFile(OUT_FILE_PATH, cluster_call.Wout, cluster_call.Hout, ImageOut);
     #endif  /* NO_BRIDGE */
 
+    end_counters();
     printf("Test %s with %ld error(s) !\n", (errors) ? "failed" : "success", errors);
 
     pmsis_exit(errors);
@@ -148,6 +155,6 @@ void run_Bilinear_Resize(void)
 
 int main()
 {
-    printf("\n\n\t *** Bilinear Resize ***\n\n");
+//    printf("\n\n\t *** Bilinear Resize ***\n\n");
     return pmsis_kickoff((void *) run_Bilinear_Resize);
 }
