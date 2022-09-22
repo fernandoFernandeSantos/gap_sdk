@@ -117,6 +117,7 @@ void run_MatMult(void) {
 //        Out1[i] = 0;
             Out2[i] = 0;
         }
+        begin_perf_iteration_i();
 
         /* Prepare cluster task and send it to cluster. */
         struct pi_cluster_task task;
@@ -125,6 +126,8 @@ void run_MatMult(void) {
 
         /* Offloading Task to cluster. */
         pi_cluster_send_task(&cluster_dev, &task);
+        end_perf_iteration_i();
+
 //        Out2[5 * H_Out] = 44;
         for (uint32_t i = 0; i < H_Out * W_Out; i++) {
 //            for (uint32_t j = 0; j < W_Out; j++) {
@@ -142,6 +145,8 @@ void run_MatMult(void) {
 
     if (errors) {
         printf("ErrorIt:%d\n", its);
+        print_iteration_perf(its);
+
         //    Logging the differences of the last iteration
         for (uint32_t i = 0; i < H_Out; i++) {
             for (uint32_t j = 0; j < W_Out; j++) {

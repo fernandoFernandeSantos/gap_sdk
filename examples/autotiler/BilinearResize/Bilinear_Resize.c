@@ -118,6 +118,8 @@ void run_Bilinear_Resize(void) {
     int its;
     for (its = 0; its < SETUP_RADIATION_ITERATIONS && errors == 0; its++) {
         /* Prepare task to be offloaded to Cluster. */
+        begin_perf_iteration_i();
+
         struct pi_cluster_task task;
         pi_cluster_task(&task, (void *) cluster_main, &cluster_call);
         task.stack_size = (uint32_t)STACK_SIZE;
@@ -125,6 +127,7 @@ void run_Bilinear_Resize(void) {
         /* Execute the function "cluster_main" on the Core 0 of cluster. */
         pi_cluster_send_task(&cluster_dev, &task);
 //        ImageOut[34] = 333;
+        end_perf_iteration_i();
 
         for (uint32_t i = 0; i < (w_out * h_out); i++) {
             errors += (ImageOut[i] != ImageOut_golden[i]);
@@ -140,6 +143,8 @@ void run_Bilinear_Resize(void) {
     /* check output with golden for regressions. */
     if (errors != 0) {
         printf("ErrorIt:%d\n", its);
+        print_iteration_perf(its);
+
         for (uint32_t i = 0; i < (w_out * h_out); i++) {
             if (ImageOut[i] != ImageOut_golden[i]) {
                 printf("Error:[%d]=%d != %d\n", i, ImageOut[i], ImageOut_golden[i]);

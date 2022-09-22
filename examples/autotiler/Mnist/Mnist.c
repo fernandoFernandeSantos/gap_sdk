@@ -156,6 +156,8 @@ uint8_t compare_output(int its, uint32_t errors_setup) {
             }
         }
         printf("ErrorIt:%d Class:%d\n", its, digit);
+        print_iteration_perf(its);
+
     }
     return digit;
 }
@@ -252,9 +254,13 @@ void test_mnist(void) {
     start_counters();
     int its;
     for (its = 0; its < SETUP_RADIATION_ITERATIONS && errors == 0; its++) {
+        begin_perf_iteration_i();
+
         pi_cluster_task(task, RunMnist, (void *) &errors);
         task->stack_size = (uint32_t)STACK_SIZE;
         pi_cluster_send_task(&cluster_dev, task);
+        end_perf_iteration_i();
+
 //        if (errors_setup != 0) {
 //            printf("ERROR Recognized number : %d\n", rec_digit);
 //            break;

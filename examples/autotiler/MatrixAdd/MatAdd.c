@@ -77,6 +77,7 @@ void run_MatAdd(void) {
         for (int i = 0; i < MAT_SIZE; i++) {
             MatOut[i] = 0;
         }
+        begin_perf_iteration_i();
         /* Prepare task to be offload to Cluster. */
         struct pi_cluster_task task;
         pi_cluster_task(&task, cluster_main, NULL);
@@ -84,7 +85,7 @@ void run_MatAdd(void) {
 
         /* Offloading Task to cluster. */
         pi_cluster_send_task(&cluster_dev, &task);
-
+        end_perf_iteration_i();
         /* Checking result. */
 //    for (int i = 0; i < MAT_H; i++) {
 //        for (int j = 0; j < MAT_W; j++) {
@@ -108,7 +109,7 @@ void run_MatAdd(void) {
 
     if (errors != 0){
         printf("ErrorIt:%d\n", its);
-
+        print_iteration_perf(its);
         for (int i = 0; i < MAT_SIZE; i++) {
             const int gold = i + SUM_INPUT;
             if (MatOut[i] != gold) {
