@@ -29,7 +29,8 @@ static inline __attribute__((always_inline)) void start_counters() {
 
 static inline __attribute__((always_inline)) void end_counters() {
 #if PROFILE_APP == 1
-    printf("CORE:%d CYCLES_IN:%d CYCLES_OUT:%d INST_IN:%d INST_OUT:%d\n",
+    printf("RATIT:%d CORE:%d CYCLES_IN:%d CYCLES_OUT:%d INST_IN:%d INST_OUT:%d\n",
+           SETUP_RADIATION_ITERATIONS,
            gap_ncore(),
            rad_metrics_diff.perf_cycles,
            pi_perf_read(PI_PERF_CYCLES),
