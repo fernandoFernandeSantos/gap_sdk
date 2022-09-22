@@ -40,12 +40,11 @@ static void init_test() {
     for (int i = 0; i < MAT_SIZE; i++) {
         Mat1[i] = i;
         Mat2[i] = SUM_INPUT;
-        MatOut[i] = 0;
+//        MatOut[i] = 0;
     }
 }
 
 void run_MatAdd(void) {
-    start_counters();
 //    printf("Entering main controller\n");
     uint32_t errors = 0;
 
@@ -71,21 +70,22 @@ void run_MatAdd(void) {
         pmsis_exit(-2);
     }
     printf("Allocated: %p, for %d bytes\n", L1_Memory, _L1_Memory_SIZE);
+    start_counters();
+    int its = 0;
 
-    /* Prepare task to be offload to Cluster. */
-    struct pi_cluster_task task;
-    pi_cluster_task(&task, cluster_main, NULL);
-    task.stack_size = (uint32_t)STACK_SIZE;
+    for (its = 0; its < SETUP_RADIATION_ITERATIONS && errors == 0; its++) {
+        for (int i = 0; i < MAT_SIZE; i++) {
+            MatOut[i] = 0;
+        }
+        /* Prepare task to be offload to Cluster. */
+        struct pi_cluster_task task;
+        pi_cluster_task(&task, cluster_main, NULL);
+        task.stack_size = (uint32_t)STACK_SIZE;
 
-    /* Offloading Task to cluster. */
-    pi_cluster_send_task(&cluster_dev, &task);
+        /* Offloading Task to cluster. */
+        pi_cluster_send_task(&cluster_dev, &task);
 
-    pi_l1_free(&cluster_dev, L1_Memory, _L1_Memory_SIZE);
-
-//    printf("Close cluster after end of computation.\n");
-    pi_cluster_close(&cluster_dev);
-
-    /* Checking result. */
+        /* Checking result. */
 //    for (int i = 0; i < MAT_H; i++) {
 //        for (int j = 0; j < MAT_W; j++) {
 //            if (MatOut[(i * MAT_W) + j] != 3) {
@@ -94,15 +94,32 @@ void run_MatAdd(void) {
 //            }
 //        }
 //    }
-
-    for (int i = 0; i < MAT_SIZE; i++) {
-        int gold = i + SUM_INPUT;
-        if (MatOut[i] != gold) {
-            errors++;
-            printf("Error:[%d]=%d != %d\n", i, MatOut[i], gold);
+//        MatOut[4 * MAT_H] = 33;
+        for (int i = 0; i < MAT_SIZE; i++) {
+            errors += (MatOut[i] != (i + SUM_INPUT));
+//                    {
+//                errors++;
+//                break;
+//                printf("Error:[%d]=%d != %d\n", i, MatOut[i], gold);
+//            }
         }
     }
     end_counters();
+
+    if (errors != 0){
+        printf("ErrorIt:%d\n", its);
+
+        for (int i = 0; i < MAT_SIZE; i++) {
+            const int gold = i + SUM_INPUT;
+            if (MatOut[i] != gold) {
+                printf("Error:[%d]=%d != %d\n", i, MatOut[i], gold);
+            }
+        }
+    }
+    pi_l1_free(&cluster_dev, L1_Memory, _L1_Memory_SIZE);
+
+//    printf("Close cluster after end of computation.\n");
+    pi_cluster_close(&cluster_dev);
 
     printf("Test %s with %ld error(s) !\n", (errors) ? "failed" : "success", errors);
 

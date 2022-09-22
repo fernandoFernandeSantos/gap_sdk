@@ -14,6 +14,7 @@
 
 #include "../performance_counter.h"
 
+
 #define STACK_SIZE ( 1024 * 2 )
 #define CID        ( 0 )
 
@@ -25,7 +26,7 @@ PI_L2 short int *Out2;
 extern char *L1_Memory;
 
 static void cluster_main() {
-    printf("cluster master start\n");
+//    printf("cluster master start\n");
 
 //    ParMatMult(M1, M2, Out1, 0);
 
@@ -33,7 +34,6 @@ static void cluster_main() {
 }
 
 void run_MatMult(void) {
-    start_counters();
 
 //    printf("Entering main controller\n");
     uint32_t errors = 0;
@@ -55,7 +55,7 @@ void run_MatMult(void) {
     uint32_t W_Out = H_M1;
     uint32_t H_Out = W_M2;
     // Gold
-    const short final_result = (W_M1 * (W_M1 + 1));
+    const short golden = (W_M1 * (W_M1 + 1));
 
     M1 = (short int *) pi_l2_malloc(W_M1 * H_M1 * sizeof(short int));
     M2 = (short int *) pi_l2_malloc(W_M2 * H_M2 * sizeof(short int));
@@ -69,7 +69,7 @@ void run_MatMult(void) {
 //               "Out1 : %p, %ld  Out2 : %p, %ld\n",
 //               M1, W_M1 * H_M1, M2, W_M2 * H_M2,
 //               Out1, W_Out * H_Out, Out2, W_Out * H_Out);
-        printf("Allocated matrix :\nM1 : %p, %ld  M2 : %p, %ld Out2 : %p, %ld\n",
+        printf("Allocated matrix-M1 : %p, %ld  M2 : %p, %ld Out2 : %p, %ld\n",
                M1, W_M1 * H_M1, M2, W_M2 * H_M2,
                Out2, W_Out * H_Out);
     }
@@ -90,10 +90,6 @@ void run_MatMult(void) {
             M2[i * W_M2 + j] = i + 1;
         }
     }
-    for (uint32_t i = 0; i < (W_Out * H_Out); i++) {
-//        Out1[i] = 0;
-        Out2[i] = 0;
-    }
 
     struct pi_device cluster_dev;
     struct pi_cluster_conf conf;
@@ -113,43 +109,59 @@ void run_MatMult(void) {
         printf("Memory Allocation Error! Quit...\n");
         pmsis_exit(-3);
     }
+    start_counters();
+    int its = 0;
+    for (its = 0; its < SETUP_RADIATION_ITERATIONS && errors == 0; its++) {
 
-    /* Prepare cluster task and send it to cluster. */
-    struct pi_cluster_task task;
-    pi_cluster_task(&task, cluster_main, NULL);
-    task.stack_size = (uint32_t)STACK_SIZE;
+        for (uint32_t i = 0; i < (W_Out * H_Out); i++) {
+//        Out1[i] = 0;
+            Out2[i] = 0;
+        }
 
-    /* Offloading Task to cluster. */
-    pi_cluster_send_task(&cluster_dev, &task);
+        /* Prepare cluster task and send it to cluster. */
+        struct pi_cluster_task task;
+        pi_cluster_task(&task, cluster_main, NULL);
+        task.stack_size = (uint32_t)STACK_SIZE;
 
-    pi_l1_free(&cluster_dev, L1_Memory, _L1_Memory_SIZE);
-//    printf("Close cluster after end of computation.\n");
-    pi_cluster_close(&cluster_dev);
-    for (uint32_t i = 0; i < H_Out; i++) {
-        for (uint32_t j = 0; j < W_Out; j++) {
-            if (Out2[i * W_Out + j] != final_result) {
-                printf("Error:[%ld][%ld]=%d != %d\n", i, j, Out2[i * W_Out + j], final_result);
-                errors++;
+        /* Offloading Task to cluster. */
+        pi_cluster_send_task(&cluster_dev, &task);
+//        Out2[5 * H_Out] = 44;
+        for (uint32_t i = 0; i < H_Out * W_Out; i++) {
+//            for (uint32_t j = 0; j < W_Out; j++) {
+//                    printf("Error:[%ld,%ld]=%d != %d\n", i, j, Out2[i * W_Out + j], golden);
+            errors += (Out2[i] != golden);
+            //            if (Out1[i * W_Out + j] != Out2[i * W_Out + j]) {
+            //                printf("Error: Out1[%ld][%ld]=%x != Out2[%ld][%ld]=%x\n",
+            //                       i, j, Out1[i * W_Out + j], i, j, Out2[i * W_Out + j]);
+            //                errors++;
+            //            }
+        }
+//        }
+    }
+    end_counters();
+
+    if (errors) {
+        printf("ErrorIt:%d\n", its);
+        //    Logging the differences of the last iteration
+        for (uint32_t i = 0; i < H_Out; i++) {
+            for (uint32_t j = 0; j < W_Out; j++) {
+                if (Out2[i * W_Out + j] != golden) {
+                    printf("Error:[%ld,%ld]=%d != %d\n", i, j, Out2[i * W_Out + j], golden);
+                }
             }
-//            if (Out1[i * W_Out + j] != Out2[i * W_Out + j]) {
-//                printf("Error: Out1[%ld][%ld]=%x != Out2[%ld][%ld]=%x\n",
-//                       i, j, Out1[i * W_Out + j], i, j, Out2[i * W_Out + j]);
-//                errors++;
-//            }
         }
     }
 
+    pi_l1_free(&cluster_dev, L1_Memory, _L1_Memory_SIZE);
+
+    //    printf("Close cluster after end of computation.\n");
+    pi_cluster_close(&cluster_dev);
     pi_l2_free(M1, W_M1 * H_M1 * sizeof(short int));
     pi_l2_free(M2, W_M2 * H_M2 * sizeof(short int));
-//    pi_l2_free(Out1, W_Out * H_Out * sizeof(short int));
+    //    pi_l2_free(Out1, W_Out * H_Out * sizeof(short int));
     pi_l2_free(Out2, W_Out * H_Out * sizeof(short int));
 
-    if (errors) {
-        printf("Error, result of different methods does not correspond!\n");
-    }
-    end_counters();
     printf("Test %s with %ld error(s) !\n", (errors) ? "failed" : "success", errors);
-
     pmsis_exit(errors);
 }
 

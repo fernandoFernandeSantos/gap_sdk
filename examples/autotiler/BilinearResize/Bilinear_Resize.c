@@ -24,15 +24,16 @@
 #define NO_BRIDGE 1
 
 #if defined(NO_BRIDGE)
+
 #include "golden.h"
+
 #else
 uint8_t *ImageIn;
 #endif  /* NO_BRIDGE */
 
 uint8_t *ImageOut;
 
-typedef struct ArgCluster
-{
+typedef struct ArgCluster {
     uint32_t Win;
     uint32_t Hin;
     uint32_t Wout;
@@ -41,33 +42,29 @@ typedef struct ArgCluster
     uint8_t *ImageOut;
 } ArgCluster_T;
 
-static void cluster_main(ArgCluster_T *ArgC)
-{
+static void cluster_main(ArgCluster_T *ArgC) {
 //    printf ("cluster master start\n");
 
     /* Launching resize on cluster. */
     ResizeImage(ArgC->ImageIn, ArgC->ImageOut);
 }
 
-void run_Bilinear_Resize(void)
-{
+void run_Bilinear_Resize(void) {
 //    printf("Entering main controller\n");
-    start_counters();
     uint32_t errors = 0;
 
     /* Input image size. */
-    uint32_t w_in = (uint32_t) IMAGE_W, h_in = (uint32_t) IMAGE_H;
+    uint32_t w_in = (uint32_t)IMAGE_W, h_in = (uint32_t)IMAGE_H;
     /* Output image size, after resizing. */
-    uint32_t w_out = w_in/2, h_out = h_in/2;
+    uint32_t w_out = w_in / 2, h_out = h_in / 2;
 
     ImageOut = (uint8_t *) pi_l2_malloc(w_out * h_out * sizeof(uint8_t));
-    if (ImageOut == NULL)
-    {
+    if (ImageOut == NULL) {
         printf("Failed to allocate memory for output image(%ld bytes).\n",
                w_out * h_out * sizeof(uint8_t));
         pmsis_exit(-1);
     }
-    #if !defined(NO_BRIDGE)
+#if !defined(NO_BRIDGE)
     char *image_name = IN_FILE_PATH;
     uint32_t w_image = 0, h_image = 0;
     ImageIn = (uint8_t *) pi_l2_malloc(w_in * h_in * sizeof(uint8_t));
@@ -86,25 +83,23 @@ void run_Bilinear_Resize(void)
                image_name, w_in, h_in, w_image, h_image);
         pmsis_exit(-3);
     }
-    #endif  /* NO_BRIDGE */
+#endif  /* NO_BRIDGE */
 
     struct pi_device cluster_dev;
     struct pi_cluster_conf conf;
     /* Init cluster configuration structure. */
     pi_cluster_conf_init(&conf);
-    conf.id = (uint32_t) CID;   /* Cluster ID. */
+    conf.id = (uint32_t)CID;   /* Cluster ID. */
     /* Configure And open cluster. */
     pi_open_from_conf(&cluster_dev, (void *) &conf);
-    if (pi_cluster_open(&cluster_dev))
-    {
+    if (pi_cluster_open(&cluster_dev)) {
         printf("Cluster open failed !\n");
         pmsis_exit(-4);
     }
 
     /* Allocating L1 memory for cluster */
     Resize_L1_Memory = (char *) pi_l1_malloc(&cluster_dev, _Resize_L1_Memory_SIZE);
-    if (Resize_L1_Memory == 0)
-    {
+    if (Resize_L1_Memory == 0) {
         printf("Failed to allocate %d bytes for L1_memory\n", _Resize_L1_Memory_SIZE);
         pmsis_exit(-5);
     }
@@ -112,49 +107,58 @@ void run_Bilinear_Resize(void)
     ArgCluster_T cluster_call;
 
     //Assinging all input variables to Cluster structure
-    cluster_call.ImageIn     = ImageIn;
-    cluster_call.Win         = w_in;
-    cluster_call.Hin         = h_in;
-    cluster_call.Wout        = w_out;
-    cluster_call.Hout        = h_out;
-    cluster_call.ImageOut    = ImageOut;
+    cluster_call.ImageIn = ImageIn;
+    cluster_call.Win = w_in;
+    cluster_call.Hin = h_in;
+    cluster_call.Wout = w_out;
+    cluster_call.Hout = h_out;
+    cluster_call.ImageOut = ImageOut;
 
-    /* Prepare task to be offload to Cluster. */
-    struct pi_cluster_task task;
-    pi_cluster_task(&task, (void *) cluster_main, &cluster_call);
-    task.stack_size = (uint32_t) STACK_SIZE;
+    start_counters();
+    int its;
+    for (its = 0; its < SETUP_RADIATION_ITERATIONS && errors == 0; its++) {
+        /* Prepare task to be offloaded to Cluster. */
+        struct pi_cluster_task task;
+        pi_cluster_task(&task, (void *) cluster_main, &cluster_call);
+        task.stack_size = (uint32_t)STACK_SIZE;
 
-    /* Execute the function "cluster_main" on the Core 0 of cluster. */
-    pi_cluster_send_task(&cluster_dev, &task);
+        /* Execute the function "cluster_main" on the Core 0 of cluster. */
+        pi_cluster_send_task(&cluster_dev, &task);
+//        ImageOut[34] = 333;
+
+        for (uint32_t i = 0; i < (w_out * h_out); i++) {
+            errors += (ImageOut[i] != ImageOut_golden[i]);
+        }
+    }
+    end_counters();
 
     pi_l1_free(&cluster_dev, Resize_L1_Memory, _Resize_L1_Memory_SIZE);
 
 //    printf("Close cluster after end of computation.\n");
     pi_cluster_close(&cluster_dev);
-//    ImageOut[34] = 333;
-    #if defined(NO_BRIDGE)
+#if defined(NO_BRIDGE)
     /* check output with golden for regressions. */
-    for (uint32_t i = 0; i < (w_out * h_out); i++)
-    {
-        if (ImageOut[i] != ImageOut_golden[i])
-        {
-            printf("Error:[%d]=%d != %d\n", i, ImageOut[i], ImageOut_golden[i]);
-            errors++;
+    if (errors != 0) {
+        printf("ErrorIt:%d\n", its);
+        for (uint32_t i = 0; i < (w_out * h_out); i++) {
+            if (ImageOut[i] != ImageOut_golden[i]) {
+                printf("Error:[%d]=%d != %d\n", i, ImageOut[i], ImageOut_golden[i]);
+//            errors++;
+            }
         }
     }
-    #else
+
+#else
     /* write result image to host. */
     WriteImageToFile(OUT_FILE_PATH, cluster_call.Wout, cluster_call.Hout, ImageOut);
-    #endif  /* NO_BRIDGE */
+#endif  /* NO_BRIDGE */
 
-    end_counters();
     printf("Test %s with %ld error(s) !\n", (errors) ? "failed" : "success", errors);
 
     pmsis_exit(errors);
 }
 
-int main()
-{
+int main() {
 //    printf("\n\n\t *** Bilinear Resize ***\n\n");
     return pmsis_kickoff((void *) run_Bilinear_Resize);
 }
