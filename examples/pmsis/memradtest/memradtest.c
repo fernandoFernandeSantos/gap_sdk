@@ -29,7 +29,7 @@ typedef uint32_t double_word_t;
 #define MEM_LEVEL 1
 #endif
 
-double_word_t *MEMORY = 0;
+double_word_t *MEMORY = NULL;
 
 void test_mem(void) {
     // We need to alloc the cluster for the L1 testing
