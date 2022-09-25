@@ -1,12 +1,17 @@
 # User Test
 #------------------------------------
+
+ifndef MEM_LEVEL
+MEM_LEVEL=1
+endif
+
 APP              = memradtest
 # App sources
 APP_SRCS         = memradtest.c
 # App includes
 APP_INC	         =
 # Compiler flags
-APP_CFLAGS       = -DMEM_LEVEL=2
+APP_CFLAGS       = -DMEM_LEVEL=$(MEM_LEVEL)
 # Linker flags
 APP_LDFLAGS      =
 

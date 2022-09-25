@@ -62,6 +62,7 @@ void test_mem(void) {
     }
     uint32_t errors = 0;
     for (uint32_t its = 0; its < SETUP_RADIATION_ITERATIONS && errors == 0; its++) {
+        printf("i:%d\n", its);
         // Set the memory
         for (uint32_t i = 0; i < elements; i++) {
             MEMORY[i] = DOUBLE_WORD_AA;
