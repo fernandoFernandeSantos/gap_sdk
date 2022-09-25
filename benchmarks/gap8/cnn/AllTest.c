@@ -4,11 +4,15 @@
 #include "pulp.h"
 #include "rt/rt_api.h"
 
+#include "../../../examples/autotiler/performance_counter.h"
+
+#include "inputs.h"
+
 #define NOGPIO
 #define BYTE
 
 
-#define ITERATIONS 100
+#define ITERATIONS 1
 #define ENABLE_CYCLE_TRACE 0
 
 #define ALIM_1_VOLT 0
@@ -995,6 +999,19 @@ void __attribute__ ((noinline)) XnorConv5x5(
         }
 }
 
+/**
+ * Comparators for RAD TEST
+ */
+void __attribute__ ((noinline))
+Additive5x5ConvolutionComparator(int W, int H, Ty *__restrict__ Out) {
+    for (int c = 0; c < (W - 4); c++) {
+        for (int l = 0; l < (H - 4); l++) {
+            printf("%d, ", Out[l * W + c]);
+        }
+        printf("\n");
+    }
+}
+
 void RunTest(int Which, int Iter, int Trace, char *Mode,int * num_ops)
 
 {
@@ -1197,17 +1214,28 @@ void RunTest(int Which, int Iter, int Trace, char *Mode,int * num_ops)
 			if (Trace) printf("[%2d][%s] %7d %35s: %8d cycles, %1d Cores\n", Which, Mode, (Wi/2)*(Hi/2)*Iter, "2x2/2 Parallel Avg Pool Vect", Ti, gap8_ncore());
 			break;
 		case 16:
-			IN = Mem; OUT = Mem+Wic*Hic; FILTER = Mem+Wic*Hic+(Wic-4)*(Hic-4); CheckMem(Wic*Hic+(Wic-4)*(Hic-4)+5*5);
-			Arg.In=IN; Arg.W=Wic; Arg.H=Hic; Arg.Filter = FILTER; Arg.Out=OUT; Arg.Norm = 6;
-			gap8_resethwtimer();
-			WriteGpio(GPIO, 1);
-			Ti = gap8_readhwtimer();
-			for (int i=0; i<Iter; i++) rt_team_fork(gap8_ncore(), (void *) ParAdditive5x5ConvolutionVect, (void *) &Arg);
-			Ti = gap8_readhwtimer() - Ti;
-			WriteGpio(GPIO, 0);
+            IN = Mem;
+            OUT = Mem + Wic * Hic;
+            FILTER = Mem + Wic * Hic + (Wic - 4) * (Hic - 4);
+            CheckMem(Wic * Hic + (Wic - 4) * (Hic - 4) + 5 * 5);
+            Arg.In = IN;
+            Arg.W = Wic;
+            Arg.H = Hic;
+            Arg.Filter = FILTER;
+            Arg.Out = OUT;
+            Arg.Norm = 0;
+            gap8_resethwtimer();
+            WriteGpio(GPIO, 1);
+            Ti = gap8_readhwtimer();
+//            for (int i = 0; i < Iter; i++)
+            rt_team_fork(gap8_ncore(), (void *) ParAdditive5x5ConvolutionVect, (void *) &Arg);
+            Ti = gap8_readhwtimer() - Ti;
+            WriteGpio(GPIO, 0);
             *num_ops = Ti;
-			if (Trace) printf("[%2d][%s] %7d %35s: %8d cycles, %1d Cores\n", Which, Mode, (Wic-4)*(Hic-4)*Iter, "Parallel Convolution Vect", Ti, gap8_ncore());
-			break;
+            if (Trace)
+                printf("[%2d][%s] %7d %35s: %8d cycles, %1d Cores\n", Which, Mode, (Wic - 4) * (Hic - 4) * Iter,
+                       "Parallel Convolution Vect", Ti, gap8_ncore());
+            break;
 		case 17:
 			// IN = Mem; OUT = Mem+Wil; FILTER = Mem+Wil+Hil; CheckMem(Wil+Hil + Wil*Hil);
 			IN = Mem; FILTER = Mem+Wil; OUT = Mem+Wil+Wil*Hil; CheckMem(Wil+Hil + Wil*Hil);
@@ -1236,6 +1264,7 @@ int benchmarks(ClusterArg_t * ArgC){
 
     return 0;
 }
+
 
 
 int main() {
@@ -1288,11 +1317,34 @@ int main() {
     rt_freq_set(RT_FREQ_DOMAIN_FC, FREQ_FC);
     rt_freq_set(RT_FREQ_DOMAIN_CL, FREQ_CL);
 
-    for (int j = 0; j < TOT_TEST; j++) {
-        printf("\n---------------   %15s   ---------------\n", tests_titles[j]);
-        for (int i = 0; i < test_num[j]; i++) {
+//    ---------------   Parallel Vector   ---------------
+//i 0 j 3 cur test 14 --                 2x2/2 Max Pool Input: 112x112
+//i 1 j 3 cur test 15 --                 2x2/2 Avg Pool Input: 112x112
+//i 2 j 3 cur test 16 --               5x5 Convolutions Input: 112x112
+//i 3 j 3 cur test 17 --                         Linear Input: 1024x16
+    cur_test = RAD_CNN_OP;
 
-            Arg.test_num = cur_test++;
+#if RAD_CNN_OP == 14
+    int j = 3;
+    int i = 0;
+#elif RAD_CNN_OP == 15
+    int j = 3;
+    int i = 1;
+#elif RAD_CNN_OP == 16
+    int j = 3;
+    int i = 2;
+#elif RAD_CNN_OP == 17
+    int j = 3;
+    int i = 3;
+#endif
+
+//    for (int j = 0; j < TOT_TEST; j++)
+    {
+        printf("\n---------------   %15s   ---------------\n", tests_titles[j]);
+//        for (int i = 0; i < test_num[j]; i++)
+        {
+
+            Arg.test_num = cur_test; //ur_test++;
             Arg.Iter = ITERATIONS;
             Arg.Trace = ENABLE_CYCLE_TRACE;
 #ifdef BYTE
@@ -1300,16 +1352,31 @@ int main() {
 #else
             strcpy(Arg.Mode,"Short");
 #endif
+            ///RAD TEST
+            Ty *input_mem = Mem;
+            Ty *output_mem = Mem + Wic * Hic;
+            Ty *filter_mem = Mem + Wic * Hic + (Wic - 4) * (Hic - 4);
+            // Set the main memories
+            memcpy(input_mem, input_array, Wic * Hic);
+            memcpy(filter_mem, filter_array, 5 * 5);
 
-            start_time = rt_time_get_us();
-            rt_cluster_call(NULL, CID, (void *) benchmarks, &Arg, NULL, 0, 0, 8, NULL);
-            end_time = rt_time_get_us();
+            for (uint32_t its = 0; its < SETUP_RADIATION_ITERATIONS; its++) {
 
-            tot_time = end_time - start_time;
-            op_num = Arg.Iter_operations;
+                // Set the output for each iteration
+                memset(output_mem, 0, (Wic - 4) * (Hic - 4));
+                start_time = rt_time_get_us();
+                rt_cluster_call(NULL, CID, (void *) benchmarks, &Arg, NULL, 0, 0, 8, NULL);
+                end_time = rt_time_get_us();
+//            printf("i %d j %d cur test %d -- ", i, j, cur_test);
+//                Additive5x5ConvolutionComparator(Wic, Hic, output_mem);
+                tot_time = end_time - start_time;
+                op_num = Arg.Iter_operations;
 
-            printf("%30s Input: %dx%d (x%d iterations) Time: %10ld uSec. Cycles: %10ld\n", tests_names[i],
-                   test_input_w[i], test_input_h[i], ITERATIONS, tot_time, op_num);
+
+//                printf("%30s Input: %dx%d (x%d iterations) Time: %10ld uSec. Cycles: %10ld\n", tests_names[i],
+//                       test_input_w[i], test_input_h[i], ITERATIONS, tot_time, op_num);
+            }
+                            Additive5x5ConvolutionComparator(Wic, Hic, output_mem);
 
         }
     }
