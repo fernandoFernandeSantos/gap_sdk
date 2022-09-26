@@ -1437,7 +1437,7 @@ int main() {
         acc_ops += op_num;
         acc_time += tot_time;
         // Compare the memory
-        if (its == 44) output_mem[3330] = 11;
+//        if (its == 44) output_mem[3330] = 11;
         errors = memcmp(output_mem, golden_array, byte_size);
 //        for(int i = 0; i < 5*5; i++){
 //            if(filter_mem[i] != filter_array[i]){
