@@ -1457,7 +1457,9 @@ int main() {
 #endif
     }
     // useconds
-    printf("LastTime:%ld LastCycles:%ld ACCTime:%ld ACCCycles:%ld\n", tot_time, op_num, acc_time, acc_ops);
+    printf("RATIT:%d ITS:%d LastTime:%ld LastCycles:%ld ACCTime:%ld ACCCycles:%ld\n",
+           SETUP_RADIATION_ITERATIONS, its, tot_time, op_num, acc_time, acc_ops);
+//    printf("ITS:%d CORE:%d CYCLES_T1:%d CYCLES_T2:%d INST_T1:%d INST_T2:%d\n",
 
     rt_cluster_mount(UNMOUNT, CID, 0, NULL);
 
