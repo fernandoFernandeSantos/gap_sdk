@@ -1085,7 +1085,7 @@ void RunTest(int Which, int Iter, int Trace, char *Mode,int * num_ops)
             WriteGpio(GPIO, 1);
             Ti = gap8_readhwtimer();
 //			for (int i=0; i<Iter; i++)
-            Linear(IN, Wil, Hil, FILTER, OUT, 6);
+            Linear(IN, Wil, Hil, FILTER, OUT, RAD_CONV_NORM);
             Ti = gap8_readhwtimer() - Ti;
             WriteGpio(GPIO, 0);
             *num_ops = Ti;
@@ -1265,17 +1265,28 @@ void RunTest(int Which, int Iter, int Trace, char *Mode,int * num_ops)
                        "Parallel Convolution Vect", Ti, gap8_ncore());
             break;
 		case 17:
-			// IN = Mem; OUT = Mem+Wil; FILTER = Mem+Wil+Hil; CheckMem(Wil+Hil + Wil*Hil);
-			IN = Mem; FILTER = Mem+Wil; OUT = Mem+Wil+Wil*Hil; CheckMem(Wil+Hil + Wil*Hil);
-			Arg.In=IN; Arg.W=Wil; Arg.H=Hil; Arg.Filter = FILTER; Arg.Out=OUT; Arg.Norm = 6;
-			gap8_resethwtimer();
-			WriteGpio(GPIO, 1);
-			Ti = gap8_readhwtimer();
-			for (int i=0; i<Iter; i++) rt_team_fork(gap8_ncore(), (void *) ParLinearVect, (void *) &Arg);
-			Ti = gap8_readhwtimer() - Ti;
-			WriteGpio(GPIO, 0);
+            // IN = Mem; OUT = Mem+Wil; FILTER = Mem+Wil+Hil; CheckMem(Wil+Hil + Wil*Hil);
+            IN = Mem;
+            FILTER = Mem + Wil;
+            OUT = Mem + Wil + Wil * Hil;
+            CheckMem(Wil + Hil + Wil * Hil);
+            Arg.In = IN;
+            Arg.W = Wil;
+            Arg.H = Hil;
+            Arg.Filter = FILTER;
+            Arg.Out = OUT;
+            Arg.Norm = RAD_CONV_NORM;
+            gap8_resethwtimer();
+            WriteGpio(GPIO, 1);
+            Ti = gap8_readhwtimer();
+//            for (int i = 0; i < Iter; i++)
+            rt_team_fork(gap8_ncore(), (void *) ParLinearVect, (void *) &Arg);
+            Ti = gap8_readhwtimer() - Ti;
+            WriteGpio(GPIO, 0);
             *num_ops = Ti;
-			if (Trace) printf("[%2d][%s] %7d %35s: %8d cycles, %1d Cores\n", Which, Mode, Wil*Hil*Iter, "Parallel Linear Vect", Ti, gap8_ncore());
+            if (Trace)
+                printf("[%2d][%s] %7d %35s: %8d cycles, %1d Cores\n", Which, Mode, Wil * Hil * Iter,
+                       "Parallel Linear Vect", Ti, gap8_ncore());
             break;
 #endif
 	}
@@ -1404,6 +1415,21 @@ int main() {
     memcpy(filter_mem, filter_array, 5 * 5);
     out_size = (Wic - 4) * (Hic - 4);
 #elif RAD_CNN_OP == RAD_SEQUENTIAL_LINEAR || RAD_CNN_OP == RAD_PARALLEL_VECT_LINEAR
+#if RAD_CNN_OP == RAD_SEQUENTIAL_LINEAR
+//            OUT = Mem + Wil;
+//            FILTER = Mem + Wil + Hil;
+    filter_mem = Mem + Wil + Hil;
+    output_mem = Mem + Wil;
+#else
+    //            FILTER = Mem + Wil;
+    //            OUT = Mem + Wil + Wil * Hil;
+    filter_mem = Mem + Wil;
+    output_mem = Mem + Wil + Wil * Hil;
+#endif
+    input_mem = Mem;
+    memcpy(input_mem, input_array, Wil);
+    memcpy(filter_mem, filter_array, Wil * Hil);
+    out_size = Hil;
 #endif
 
 //    for (int j = 0; j < TOT_TEST; j++)    {
@@ -1455,7 +1481,7 @@ int main() {
 //            printf("%d,", output_mem[i]);
 //        }
 #elif RAD_CNN_OP == RAD_SEQUENTIAL_LINEAR || RAD_CNN_OP == RAD_PARALLEL_VECT_LINEAR
-
+        LinearComparatorAndPrint(out_size, golden_array, output_mem);
 #endif
     }
     // useconds
