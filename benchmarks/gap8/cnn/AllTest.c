@@ -1421,8 +1421,9 @@ int main() {
     uint32_t errors = 0;
     uint32_t its;
     int byte_size = out_size * sizeof(Ty);
-    long int acc_time = 0;
+    long int acc_time = rt_time_get_us();
     long int acc_ops = 0;
+
     for (its = 0; its < SETUP_RADIATION_ITERATIONS && errors == 0; its++) {
         // Set the output for each iteration
         memset(output_mem, 0, byte_size);
@@ -1433,7 +1434,6 @@ int main() {
 
         tot_time = end_time - start_time;
         op_num = Arg.Iter_operations;
-        acc_time += tot_time;
         acc_ops += op_num;
         // Compare the memory
 //        if (its == 44) output_mem[3330] = 11;
@@ -1444,6 +1444,7 @@ int main() {
 //            }
 //        }
     }
+    acc_time = end_time - acc_time;
     if (errors != 0) {
         printf("ErrorIt:%d\n", its);
 #if RAD_CNN_OP == RAD_SEQUENTIAL_CONV || RAD_CNN_OP == RAD_PARALLEL_VECT_CONV
