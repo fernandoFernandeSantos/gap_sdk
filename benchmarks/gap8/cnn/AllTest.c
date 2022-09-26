@@ -6,7 +6,34 @@
 
 #include "../../../examples/autotiler/performance_counter.h"
 
-#include "inputs.h"
+//    ---------------        Sequential   ---------------
+//    i 0 j 0 cur test 0 --                 2x2/2 Max Pool Input: 112x112
+//    i 1 j 0 cur test 1 --                 2x2/2 Avg Pool Input: 112x112
+//    i 2 j 0 cur test 2 --               5x5 Convolutions Input: 112x112
+//    i 3 j 0 cur test 3 --                         Linear Input: 1024x16
+//    ---------------   Parallel Vector   ---------------
+//    i 0 j 3 cur test 14 --                 2x2/2 Max Pool Input: 112x112
+//    i 1 j 3 cur test 15 --                 2x2/2 Avg Pool Input: 112x112
+//    i 2 j 3 cur test 16 --               5x5 Convolutions Input: 112x112
+//    i 3 j 3 cur test 17 --                         Linear Input: 1024x16
+#define RAD_SEQUENTIAL_MAX_POOL 0
+#define RAD_SEQUENTIAL_AVG_MAX_POOL 1
+#define RAD_SEQUENTIAL_CONV 2
+#define RAD_SEQUENTIAL_LINEAR 3
+#define RAD_PARALLEL_VECT_MAX_POOL 14
+#define RAD_PARALLEL_VECT_AVG_MAX_POOL 15
+#define RAD_PARALLEL_VECT_CONV 16
+#define RAD_PARALLEL_VECT_LINEAR  17
+#define RAD_CONV_NORM 1
+
+#if RAD_CNN_OP == RAD_SEQUENTIAL_CONV || RAD_CNN_OP == RAD_PARALLEL_VECT_CONV
+#include "inputs_conv.h"
+
+#elif RAD_CNN_OP == RAD_SEQUENTIAL_LINEAR || RAD_CNN_OP == RAD_PARALLEL_VECT_LINEAR
+#include "inputs_linear.h"
+
+#endif
+
 
 #define NOGPIO
 #define BYTE
@@ -872,7 +899,7 @@ void __attribute__ ((noinline)) Additive5x5Convolution(Ty *__restrict__ In, int 
         int FH=5,FW=5;
         for (int c=0; c<(W-4); c++) {
                 for (int l=0; l<(H-4); l++) {
-                        int R = Out[l*W+c]<<Norm;
+                        int R = Out[l*(W-4)+c]<<Norm;
                         for (int kl=0; kl<FH; kl++) {
                                 R += Filter[kl*FW+0]*In[(l+kl)*W + c+0];
                                 R += Filter[kl*FW+1]*In[(l+kl)*W + c+1];
@@ -885,7 +912,7 @@ void __attribute__ ((noinline)) Additive5x5Convolution(Ty *__restrict__ In, int 
                                 }
 */
                         }
-                        Out[l*W+c] = R>>Norm;
+                        Out[l*(W-4)+c] = R>>Norm;
                 }
         }
 }
@@ -999,18 +1026,6 @@ void __attribute__ ((noinline)) XnorConv5x5(
         }
 }
 
-/**
- * Comparators for RAD TEST
- */
-void __attribute__ ((noinline))
-Additive5x5ConvolutionComparator(int W, int H, Ty *__restrict__ Out) {
-    for (int c = 0; c < (W - 4); c++) {
-        for (int l = 0; l < (H - 4); l++) {
-            printf("%d, ", Out[l * W + c]);
-        }
-        printf("\n");
-    }
-}
 
 void RunTest(int Which, int Iter, int Trace, char *Mode,int * num_ops)
 
@@ -1044,27 +1059,38 @@ void RunTest(int Which, int Iter, int Trace, char *Mode,int * num_ops)
 			if (Trace) printf("[%2d][%s] %7d %35s: %8d cycles\n", Which, Mode, (Wi/2)*(Hi/2)*Iter, "2x2/2 Avg Pool", Ti);
 			break;
 		case 2:
-			IN = Mem; OUT = Mem+Wic*Hic; FILTER = Mem+Wic*Hic+(Wic-4)*(Hic-4); CheckMem(Wic*Hic+(Wic-4)*(Hic-4)+5*5);
-			gap8_resethwtimer();
-			WriteGpio(GPIO, 1);
-			Ti = gap8_readhwtimer();
-			for (int i=0; i<Iter; i++) Additive5x5Convolution(IN, Wic, Hic, FILTER, OUT, 6);
-			Ti = gap8_readhwtimer() - Ti;
-			WriteGpio(GPIO, 0);
+            IN = Mem;
+            OUT = Mem + Wic * Hic;
+            FILTER = Mem + Wic * Hic + Wic * Hic;//(Wic - 4) * (Hic - 4);
+//            CheckMem(Wic * Hic + (Wic - 4) * (Hic - 4) + 5 * 5);
+            CheckMem(Wic * Hic + Wic * Hic + 5 * 5);
+            gap8_resethwtimer();
+            WriteGpio(GPIO, 1);
+            Ti = gap8_readhwtimer();
+//            for (int i = 0; i < Iter; i++)
+            Additive5x5Convolution(IN, Wic, Hic, FILTER, OUT, RAD_CONV_NORM);
+            Ti = gap8_readhwtimer() - Ti;
+            WriteGpio(GPIO, 0);
             *num_ops = Ti;
-			if (Trace) printf("[%2d][%s] %7d %35s: %8d cycles\n", Which, Mode, (Wic-4)*(Hic-4)*Iter, "5x5 Convolutions", Ti);
-			break;
+            if (Trace)
+                printf("[%2d][%s] %7d %35s: %8d cycles\n", Which, Mode, (Wic - 4) * (Hic - 4) * Iter,
+                       "5x5 Convolutions", Ti);
+            break;
 		case 3:
-			IN = Mem; OUT = Mem+Wil; FILTER = Mem+Wil+Hil; CheckMem(Wil+Hil + Wil*Hil);
-			gap8_resethwtimer();
-			WriteGpio(GPIO, 1);
-			Ti = gap8_readhwtimer();
-			for (int i=0; i<Iter; i++) Linear(IN, Wil, Hil, FILTER, OUT, 6);
-			Ti = gap8_readhwtimer() - Ti;
-			WriteGpio(GPIO, 0);
+            IN = Mem;
+            OUT = Mem + Wil;
+            FILTER = Mem + Wil + Hil;
+            CheckMem(Wil + Hil + Wil * Hil);
+            gap8_resethwtimer();
+            WriteGpio(GPIO, 1);
+            Ti = gap8_readhwtimer();
+//			for (int i=0; i<Iter; i++)
+            Linear(IN, Wil, Hil, FILTER, OUT, 6);
+            Ti = gap8_readhwtimer() - Ti;
+            WriteGpio(GPIO, 0);
             *num_ops = Ti;
-			if (Trace) printf("[%2d][%s] %7d %35s: %8d cycles\n", Which, Mode, Wil*Hil*Iter, "Linear", Ti);
-			break;
+            if (Trace) printf("[%2d][%s] %7d %35s: %8d cycles\n", Which, Mode, Wil * Hil * Iter, "Linear", Ti);
+            break;
 		case 4:
 			{
 				unsigned int In = (unsigned int) Mem;
@@ -1216,14 +1242,16 @@ void RunTest(int Which, int Iter, int Trace, char *Mode,int * num_ops)
 		case 16:
             IN = Mem;
             OUT = Mem + Wic * Hic;
-            FILTER = Mem + Wic * Hic + (Wic - 4) * (Hic - 4);
-            CheckMem(Wic * Hic + (Wic - 4) * (Hic - 4) + 5 * 5);
+            FILTER = Mem + Wic * Hic + Wic * Hic;//(Wic - 4) * (Hic - 4);
+//            CheckMem(Wic * Hic + (Wic - 4) * (Hic - 4) + 5 * 5);
+            CheckMem(Wic * Hic + Wic * Hic + 5 * 5);
+
             Arg.In = IN;
             Arg.W = Wic;
             Arg.H = Hic;
             Arg.Filter = FILTER;
             Arg.Out = OUT;
-            Arg.Norm = 0;
+            Arg.Norm = RAD_CONV_NORM;
             gap8_resethwtimer();
             WriteGpio(GPIO, 1);
             Ti = gap8_readhwtimer();
@@ -1265,7 +1293,38 @@ int benchmarks(ClusterArg_t * ArgC){
     return 0;
 }
 
+#define RAD_FORCE_INLINE __attribute__((always_inline)) inline
 
+/**
+ * Comparators for RAD TEST
+ * CONVOLUTION COMPARISON
+ */
+RAD_FORCE_INLINE
+void Additive5x5ConvolutionComparatorAndPrint(int W, int H, Ty *__restrict__ output_mem) {
+    for (int c = 0; c < (W - 4); c++) {
+        for (int l = 0; l < (H - 4); l++) {
+//            printf("%d, ", Out[l * W + c]);
+            int cmpi = l * (W - 4) + c;
+            int f = output_mem[cmpi];
+            int g = golden_array[cmpi];
+            if (f != g) {
+                printf("Error:[%ld,%ld]=%d != %d\n", l, c, f, g);
+            }
+        }
+    }
+}
+
+/**
+ * LINEAR COMPARISON
+ */
+RAD_FORCE_INLINE
+void LinearComparatorAndPrint(int H, const Ty *__restrict__ golden_array, const Ty *__restrict__ output_mem) {
+    for (int i = 0; i < H; i++) {
+        if (output_mem[i]  != golden_array[i]) {
+            printf("Error:[%ld]=%d != %d\n", i, output_mem[i], golden_array[i]);
+        }
+    }
+}
 
 int main() {
     long start_time, end_time;
@@ -1317,70 +1376,87 @@ int main() {
     rt_freq_set(RT_FREQ_DOMAIN_FC, FREQ_FC);
     rt_freq_set(RT_FREQ_DOMAIN_CL, FREQ_CL);
 
-//    ---------------   Parallel Vector   ---------------
-//i 0 j 3 cur test 14 --                 2x2/2 Max Pool Input: 112x112
-//i 1 j 3 cur test 15 --                 2x2/2 Avg Pool Input: 112x112
-//i 2 j 3 cur test 16 --               5x5 Convolutions Input: 112x112
-//i 3 j 3 cur test 17 --                         Linear Input: 1024x16
     cur_test = RAD_CNN_OP;
+    printf("Testing OP:%d--%s\n", RAD_CNN_OP, tests_names[RAD_CNN_OP]);
 
-#if RAD_CNN_OP == 14
-    int j = 3;
-    int i = 0;
-#elif RAD_CNN_OP == 15
-    int j = 3;
-    int i = 1;
-#elif RAD_CNN_OP == 16
-    int j = 3;
-    int i = 2;
-#elif RAD_CNN_OP == 17
-    int j = 3;
-    int i = 3;
+//    ---------------        Sequential   ---------------
+//    i 0 j 0 cur test 0 --                 2x2/2 Max Pool Input: 112x112
+//    i 1 j 0 cur test 1 --                 2x2/2 Avg Pool Input: 112x112
+//    i 2 j 0 cur test 2 --               5x5 Convolutions Input: 112x112
+//    i 3 j 0 cur test 3 --                         Linear Input: 1024x16
+//    ---------------   Parallel Vector   ---------------
+//    i 0 j 3 cur test 14 --                 2x2/2 Max Pool Input: 112x112
+//    i 1 j 3 cur test 15 --                 2x2/2 Avg Pool Input: 112x112
+//    i 2 j 3 cur test 16 --               5x5 Convolutions Input: 112x112
+//    i 3 j 3 cur test 17 --                         Linear Input: 1024x16
+    ///RAD TEST
+    Ty *input_mem;
+    Ty *output_mem;
+    Ty *filter_mem;
+    int out_size = 0;
+#if RAD_CNN_OP == RAD_SEQUENTIAL_CONV || RAD_CNN_OP == RAD_PARALLEL_VECT_CONV
+    ///RAD TEST
+    input_mem = Mem;
+    output_mem = Mem + Wic * Hic;
+    filter_mem = Mem + Wic * Hic + (Wic) * (Hic);
+    // Set the main memories
+    memcpy(input_mem, input_array, Wic * Hic);
+    memcpy(filter_mem, filter_array, 5 * 5);
+    out_size = (Wic - 4) * (Hic - 4);
+#elif RAD_CNN_OP == RAD_SEQUENTIAL_LINEAR || RAD_CNN_OP == RAD_PARALLEL_VECT_LINEAR
 #endif
 
-//    for (int j = 0; j < TOT_TEST; j++)
-    {
-        printf("\n---------------   %15s   ---------------\n", tests_titles[j]);
-//        for (int i = 0; i < test_num[j]; i++)
-        {
+//    for (int j = 0; j < TOT_TEST; j++)    {
+//    printf("\n---------------   %15s   ---------------\n", tests_titles[j]);
+//        for (int i = 0; i < test_num[j]; i++)        {
 
-            Arg.test_num = cur_test; //ur_test++;
-            Arg.Iter = ITERATIONS;
-            Arg.Trace = ENABLE_CYCLE_TRACE;
+    Arg.test_num = cur_test; //ur_test++;
+    Arg.Iter = ITERATIONS;
+    Arg.Trace = ENABLE_CYCLE_TRACE;
 #ifdef BYTE
-            strcpy(Arg.Mode, "Byte");
+    strcpy(Arg.Mode, "Byte");
 #else
-            strcpy(Arg.Mode,"Short");
+    strcpy(Arg.Mode,"Short");
 #endif
-            ///RAD TEST
-            Ty *input_mem = Mem;
-            Ty *output_mem = Mem + Wic * Hic;
-            Ty *filter_mem = Mem + Wic * Hic + (Wic - 4) * (Hic - 4);
-            // Set the main memories
-            memcpy(input_mem, input_array, Wic * Hic);
-            memcpy(filter_mem, filter_array, 5 * 5);
+    uint32_t errors = 0;
+    uint32_t its;
+    int byte_size = out_size * sizeof(Ty);
+    long int acc_time = 0;
+    long int acc_ops = 0;
+    for (its = 0; its < SETUP_RADIATION_ITERATIONS && errors == 0; its++) {
+        // Set the output for each iteration
+        memset(output_mem, 0, byte_size);
+        // Call the cluster
+        start_time = rt_time_get_us();
+        rt_cluster_call(NULL, CID, (void *) benchmarks, &Arg, NULL, 0, 0, 8, NULL);
+        end_time = rt_time_get_us();
 
-            for (uint32_t its = 0; its < SETUP_RADIATION_ITERATIONS; its++) {
-
-                // Set the output for each iteration
-                memset(output_mem, 0, (Wic - 4) * (Hic - 4));
-                start_time = rt_time_get_us();
-                rt_cluster_call(NULL, CID, (void *) benchmarks, &Arg, NULL, 0, 0, 8, NULL);
-                end_time = rt_time_get_us();
-//            printf("i %d j %d cur test %d -- ", i, j, cur_test);
-//                Additive5x5ConvolutionComparator(Wic, Hic, output_mem);
-                tot_time = end_time - start_time;
-                op_num = Arg.Iter_operations;
-
-
-//                printf("%30s Input: %dx%d (x%d iterations) Time: %10ld uSec. Cycles: %10ld\n", tests_names[i],
-//                       test_input_w[i], test_input_h[i], ITERATIONS, tot_time, op_num);
-            }
-                            Additive5x5ConvolutionComparator(Wic, Hic, output_mem);
-
-        }
+        tot_time = end_time - start_time;
+        op_num = Arg.Iter_operations;
+        acc_time += tot_time;
+        acc_ops += op_num;
+        // Compare the memory
+//        if (its == 44) output_mem[3330] = 11;
+        errors = memcmp(output_mem, golden_array, byte_size);
+//        for(int i = 0; i < 5*5; i++){
+//            if(filter_mem[i] != filter_array[i]){
+//                printf("%d %d\n", filter_mem[i], filter_array[i]);
+//            }
+//        }
     }
+    if (errors != 0) {
+        printf("ErrorIt:%d\n", its);
+#if RAD_CNN_OP == RAD_SEQUENTIAL_CONV || RAD_CNN_OP == RAD_PARALLEL_VECT_CONV
+        Additive5x5ConvolutionComparatorAndPrint(Wic, Hic, output_mem);
+//        for(int i = 0; i < out_size; i++){
+//            printf("%d,", output_mem[i]);
+//        }
+#elif RAD_CNN_OP == RAD_SEQUENTIAL_LINEAR || RAD_CNN_OP == RAD_PARALLEL_VECT_LINEAR
 
+#endif
+    }
+    // useconds
+    printf("LastTime:%ld LastCycles:%ld ACCTime:%ld ACCCycles:%ld\n", tot_time, op_num, acc_time, acc_ops);
 
     rt_cluster_mount(UNMOUNT, CID, 0, NULL);
 
