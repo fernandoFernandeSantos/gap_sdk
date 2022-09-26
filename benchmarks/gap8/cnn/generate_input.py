@@ -10,7 +10,7 @@ def generate_conv_input():
     low = -high
     filter_array = np.random.randint(low=low, high=high, size=(5, 5))
     in_array = np.random.randint(low=low, high=high, size=(wic, hic))
-    with open("inputs.h", "w") as inputs_fp:
+    with open("inputs_maxpool.h", "w") as inputs_fp:
         inputs_fp.write("#ifndef __INPUTS_H__\n#define __INPUTS_H__\n")
         for (array, var_name) in [(filter_array, "filter_array"),
                                   (in_array, "input_array")]:
@@ -33,7 +33,7 @@ def generate_linear_input():
 
     filter_array = np.random.randint(low=low, high=high, size=wil * hil)
     in_array = np.random.randint(low=low, high=high, size=wil)
-    with open("inputs.h", "w") as inputs_fp:
+    with open("inputs_maxpool.h", "w") as inputs_fp:
         inputs_fp.write("#ifndef __INPUTS_H__\n#define __INPUTS_H__\n")
         for (array, var_name) in [(filter_array, "filter_array"),
                                   (in_array, "input_array")]:
@@ -48,5 +48,25 @@ def generate_linear_input():
         inputs_fp.write("#endif\n")
 
 
+def generate_maxpool_input():
+    wi = 112
+    hi = 112
+    high = 127
+    low = 1
+
+    in_array = np.random.randint(low=low, high=high, size=wi * hi)
+    with open("inputs_maxpool.h", "w") as inputs_fp:
+        inputs_fp.write("#ifndef __INPUTS_H__\n#define __INPUTS_H__\n")
+        inputs_fp.write(
+            f"signed char input_array[] = " + "{\n"
+        )
+
+        for line in in_array:
+            inputs_fp.write(f"{line},")
+            # inputs_fp.write("\n")
+        inputs_fp.write("};\n\n")
+        inputs_fp.write("#endif\n")
+
 # generate_conv_input()
-generate_linear_input()
+# generate_linear_input()
+generate_maxpool_input()
