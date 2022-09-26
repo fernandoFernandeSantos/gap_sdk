@@ -1473,7 +1473,7 @@ int main() {
     }
     if (errors != 0) {
         printf("ErrorIt:%d\n", its);
-        printf("ITS:%d CYCLES:%d TIME:%d\n", its, acc_ops, acc_time);
+        printf("ITS:%d TIME_IT:%ld CYCLE_IT:%ld CYCLES:%d TIME:%d\n", its, tot_time, op_num, acc_ops, acc_time);
 
 #if RAD_CNN_OP == RAD_SEQUENTIAL_CONV || RAD_CNN_OP == RAD_PARALLEL_VECT_CONV
         Additive5x5ConvolutionComparatorAndPrint(Wic, Hic, output_mem);
@@ -1487,7 +1487,7 @@ int main() {
     // useconds
 
     printf("RATIT:%d ITS:%d TIME_IT:%ld CYCLE_IT:%ld ACCTIME:%ld ACCCYCLES:%ld\n",
-           SETUP_RADIATION_ITERATIONS, its,   tot_time,   op_num,            acc_time,   acc_ops);
+           SETUP_RADIATION_ITERATIONS, its, tot_time, op_num, acc_time, acc_ops);
 //    printf("ITS:%d CORE:%d CYCLES_T1:%d CYCLES_T2:%d INST_T1:%d INST_T2:%d\n",
 
     rt_cluster_mount(UNMOUNT, CID, 0, NULL);
