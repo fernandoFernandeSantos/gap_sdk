@@ -1421,7 +1421,7 @@ int main() {
     uint32_t errors = 0;
     uint32_t its;
     int byte_size = out_size * sizeof(Ty);
-    long int acc_time = rt_time_get_us();
+    long int acc_time = 0;
     long int acc_ops = 0;
 
     for (its = 0; its < SETUP_RADIATION_ITERATIONS && errors == 0; its++) {
@@ -1435,8 +1435,9 @@ int main() {
         tot_time = end_time - start_time;
         op_num = Arg.Iter_operations;
         acc_ops += op_num;
+        acc_time += tot_time;
         // Compare the memory
-//        if (its == 44) output_mem[3330] = 11;
+        if (its == 44) output_mem[3330] = 11;
         errors = memcmp(output_mem, golden_array, byte_size);
 //        for(int i = 0; i < 5*5; i++){
 //            if(filter_mem[i] != filter_array[i]){
@@ -1444,9 +1445,10 @@ int main() {
 //            }
 //        }
     }
-    acc_time = end_time - acc_time;
     if (errors != 0) {
         printf("ErrorIt:%d\n", its);
+        printf("ITS:%d CYCLES:%d TIME:%d\n", its, acc_ops, acc_time);
+
 #if RAD_CNN_OP == RAD_SEQUENTIAL_CONV || RAD_CNN_OP == RAD_PARALLEL_VECT_CONV
         Additive5x5ConvolutionComparatorAndPrint(Wic, Hic, output_mem);
 //        for(int i = 0; i < out_size; i++){
@@ -1457,8 +1459,9 @@ int main() {
 #endif
     }
     // useconds
-    printf("RATIT:%d ITS:%d LastTime:%ld LastCycles:%ld ACCTime:%ld ACCCycles:%ld\n",
-           SETUP_RADIATION_ITERATIONS, its, tot_time, op_num, acc_time, acc_ops);
+
+    printf("RATIT:%d ITS:%d TIME_IT:%ld CYCLE_IT:%ld ACCTIME:%ld ACCCYCLES:%ld\n",
+           SETUP_RADIATION_ITERATIONS, its,   tot_time,   op_num,            acc_time,   acc_ops);
 //    printf("ITS:%d CORE:%d CYCLES_T1:%d CYCLES_T2:%d INST_T1:%d INST_T2:%d\n",
 
     rt_cluster_mount(UNMOUNT, CID, 0, NULL);
