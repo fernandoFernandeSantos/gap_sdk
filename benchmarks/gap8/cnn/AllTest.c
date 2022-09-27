@@ -5,7 +5,6 @@
 #include "rt/rt_api.h"
 
 //#include "../../../examples/autotiler/performance_counter.h"
-#define SETUP_RADIATION_ITERATIONS 32768
 
 //    ---------------        Sequential   ---------------
 //    i 0 j 0 cur test 0 --                 2x2/2 Max Pool Input: 112x112
@@ -29,12 +28,15 @@
 
 #if RAD_CNN_OP == RAD_SEQUENTIAL_CONV || RAD_CNN_OP == RAD_PARALLEL_VECT_CONV
 #include "inputs_conv.h"
+#define SETUP_RADIATION_ITERATIONS 32768
 
 #elif RAD_CNN_OP == RAD_SEQUENTIAL_LINEAR || RAD_CNN_OP == RAD_PARALLEL_VECT_LINEAR
 #include "inputs_linear.h"
+#define SETUP_RADIATION_ITERATIONS 65536
 
 #elif RAD_CNN_OP == RAD_SEQUENTIAL_MAX_POOL || RAD_CNN_OP == RAD_PARALLEL_VECT_MAX_POOL
 #include "inputs_maxpool.h"
+#define SETUP_RADIATION_ITERATIONS 65536
 
 #endif
 
@@ -1467,6 +1469,8 @@ int main() {
     output_mem = Mem + Wi * Hi;
     memcpy(input_mem, input_array, Wi * Hi);
     out_size = (Wi / 2) * (Hi / 2);
+#else
+#error "INVALID RAD_CNN_OP"
 #endif
 
 //    for (int j = 0; j < TOT_TEST; j++)    {
