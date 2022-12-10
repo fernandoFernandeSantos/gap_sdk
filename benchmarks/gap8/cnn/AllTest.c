@@ -28,16 +28,20 @@
 
 #if RAD_CNN_OP == RAD_SEQUENTIAL_CONV || RAD_CNN_OP == RAD_PARALLEL_VECT_CONV
 #include "inputs_conv.h"
-#define SETUP_RADIATION_ITERATIONS 32768
+#define SETUP_RADIATION_ITERATIONS 16384
 
 #elif RAD_CNN_OP == RAD_SEQUENTIAL_LINEAR || RAD_CNN_OP == RAD_PARALLEL_VECT_LINEAR
 #include "inputs_linear.h"
 //This was set in the last hours of 27/09/2022
-//#define SETUP_RADIATION_ITERATIONS 131072
-#define SETUP_RADIATION_ITERATIONS 4194304
+#define SETUP_RADIATION_ITERATIONS 131072
+//#define SETUP_RADIATION_ITERATIONS 4194304
 
 #elif RAD_CNN_OP == RAD_SEQUENTIAL_MAX_POOL || RAD_CNN_OP == RAD_PARALLEL_VECT_MAX_POOL
 #include "inputs_maxpool.h"
+#define SETUP_RADIATION_ITERATIONS 65536
+
+#elif RAD_CNN_OP == RAD_SEQUENTIAL_AVG_MAX_POOL || RAD_CNN_OP == RAD_PARALLEL_VECT_AVG_MAX_POOL
+#include "inputs_avgpool.h"
 #define SETUP_RADIATION_ITERATIONS 65536
 
 #endif
@@ -51,8 +55,8 @@
 #define ENABLE_CYCLE_TRACE 0
 
 #define ALIM_1_VOLT 0
-#define FREQ_FC (250*1000000)
-#define FREQ_CL (175*1000000)
+//#define FREQ_FC (250*1000000)
+//#define FREQ_CL (175*1000000)
 
 
 #define Wi  112
@@ -1060,17 +1064,22 @@ void RunTest(int Which, int Iter, int Trace, char *Mode,int * num_ops)
                 printf("[%2d][%s] %7d %35s: %8d cycles\n", Which, Mode, (Wi / 2) * (Hi / 2) * Iter, "2x2/2 Max Pool",
                        Ti);
             break;
-		case 1:
-			IN = Mem; OUT = Mem+Wi*Hi; CheckMem(Wi*Hi+(Wi/2)*(Hi/2));
-			gap8_resethwtimer();
-			WriteGpio(GPIO, 1);
-			Ti = gap8_readhwtimer();
-			for (int i=0; i<Iter; i++) AvgPooling(IN, Wi, Hi, OUT);
-			Ti = gap8_readhwtimer() - Ti;
-			WriteGpio(GPIO, 0);
+        case 1:
+            IN = Mem;
+            OUT = Mem + Wi * Hi;
+            CheckMem(Wi * Hi + (Wi / 2) * (Hi / 2));
+            gap8_resethwtimer();
+            WriteGpio(GPIO, 1);
+            Ti = gap8_readhwtimer();
+//			for (int i=0; i<Iter; i++)
+            AvgPooling(IN, Wi, Hi, OUT);
+            Ti = gap8_readhwtimer() - Ti;
+            WriteGpio(GPIO, 0);
             *num_ops = Ti;
-			if (Trace) printf("[%2d][%s] %7d %35s: %8d cycles\n", Which, Mode, (Wi/2)*(Hi/2)*Iter, "2x2/2 Avg Pool", Ti);
-			break;
+            if (Trace)
+                printf("[%2d][%s] %7d %35s: %8d cycles\n", Which, Mode, (Wi / 2) * (Hi / 2) * Iter, "2x2/2 Avg Pool",
+                       Ti);
+            break;
 		case 2:
             IN = Mem;
             OUT = Mem + Wic * Hic;
@@ -1121,27 +1130,37 @@ void RunTest(int Which, int Iter, int Trace, char *Mode,int * num_ops)
 			break;
 #ifndef RISCV
 		case 5:
-			IN = Mem; OUT = Mem+Wi*Hi; CheckMem(Wi*Hi+(Wi/2)*(Hi/2));
-			gap8_resethwtimer();
-			WriteGpio(GPIO, 1);
-			Ti = gap8_readhwtimer();
-			for (int i=0; i<Iter; i++) MaxPoolingVect(IN, Wi, Hi, OUT);
-			Ti = gap8_readhwtimer() - Ti;
-			WriteGpio(GPIO, 0);
+            IN = Mem;
+            OUT = Mem + Wi * Hi;
+            CheckMem(Wi * Hi + (Wi / 2) * (Hi / 2));
+            gap8_resethwtimer();
+            WriteGpio(GPIO, 1);
+            Ti = gap8_readhwtimer();
+//            for (int i = 0; i < Iter; i++)
+            MaxPoolingVect(IN, Wi, Hi, OUT);
+            Ti = gap8_readhwtimer() - Ti;
+            WriteGpio(GPIO, 0);
             *num_ops = Ti;
-			if (Trace) printf("[%2d][%s] %7d %35s: %8d cycles\n", Which, Mode, (Wi/2)*(Hi/2)*Iter, "2x2/2 Max Pool Vect", Ti);
-			break;
+            if (Trace)
+                printf("[%2d][%s] %7d %35s: %8d cycles\n", Which, Mode, (Wi / 2) * (Hi / 2) * Iter,
+                       "2x2/2 Max Pool Vect", Ti);
+            break;
 		case 6:
-			IN = Mem; OUT = Mem+Wi*Hi; CheckMem(Wi*Hi+(Wi/2)*(Hi/2));
-			gap8_resethwtimer();
-			WriteGpio(GPIO, 1);
-			Ti = gap8_readhwtimer();
-			for (int i=0; i<Iter; i++) AvgPoolingVect(IN, Wi, Hi, OUT);
-			Ti = gap8_readhwtimer() - Ti;
-			WriteGpio(GPIO, 0);
+            IN = Mem;
+            OUT = Mem + Wi * Hi;
+            CheckMem(Wi * Hi + (Wi / 2) * (Hi / 2));
+            gap8_resethwtimer();
+            WriteGpio(GPIO, 1);
+            Ti = gap8_readhwtimer();
+//			for (int i=0; i<Iter; i++)
+            AvgPoolingVect(IN, Wi, Hi, OUT);
+            Ti = gap8_readhwtimer() - Ti;
+            WriteGpio(GPIO, 0);
             *num_ops = Ti;
-			if (Trace) printf("[%2d][%s] %7d %35s: %8d cycles\n", Which, Mode, (Wi/2)*(Hi/2)*Iter, "2x2/2 Avg Pool Vect", Ti);
-			break;
+            if (Trace)
+                printf("[%2d][%s] %7d %35s: %8d cycles\n", Which, Mode, (Wi / 2) * (Hi / 2) * Iter,
+                       "2x2/2 Avg Pool Vect", Ti);
+            break;
 		case 7:
 			IN = Mem; OUT = Mem+Wic*Hic; FILTER = Mem+Wic*Hic+(Wic-4)*(Hic-4); CheckMem(Wic*Hic+(Wic-4)*(Hic-4)+5*5);
 			gap8_resethwtimer();
@@ -1177,17 +1196,24 @@ void RunTest(int Which, int Iter, int Trace, char *Mode,int * num_ops)
 			if (Trace) printf("[%2d][%s] %7d %35s: %8d cycles, %1d Cores\n", Which, Mode, (Wi/2)*(Hi/2)*Iter, "2x2/2 Parallel Max Pool", Ti, gap8_ncore());
 			break;
 		case 10:
-			IN = Mem; OUT = Mem+Wi*Hi; CheckMem(Wi*Hi+(Wi/2)*(Hi/2));
-			Arg.In=IN; Arg.W=Wi; Arg.H=Hi; Arg.Out=OUT;
-			gap8_resethwtimer();
-			WriteGpio(GPIO, 1);
-			Ti = gap8_readhwtimer();
-			for (int i=0; i<Iter; i++) rt_team_fork(gap8_ncore(), (void *) ParAvgPooling, (void *) &Arg);
-			Ti = gap8_readhwtimer() - Ti;
-			WriteGpio(GPIO, 0);
+            IN = Mem;
+            OUT = Mem + Wi * Hi;
+            CheckMem(Wi * Hi + (Wi / 2) * (Hi / 2));
+            Arg.In = IN;
+            Arg.W = Wi;
+            Arg.H = Hi;
+            Arg.Out = OUT;
+            gap8_resethwtimer();
+            WriteGpio(GPIO, 1);
+            Ti = gap8_readhwtimer();
+            for (int i = 0; i < Iter; i++) rt_team_fork(gap8_ncore(), (void *) ParAvgPooling, (void *) &Arg);
+            Ti = gap8_readhwtimer() - Ti;
+            WriteGpio(GPIO, 0);
             *num_ops = Ti;
-			if (Trace) printf("[%2d][%s] %7d %35s: %8d cycles, %1d Cores\n", Which, Mode, (Wi/2)*(Hi/2)*Iter, "2x2/2 Parallel Avg Pool", Ti, gap8_ncore());
-			break;
+            if (Trace)
+                printf("[%2d][%s] %7d %35s: %8d cycles, %1d Cores\n", Which, Mode, (Wi / 2) * (Hi / 2) * Iter,
+                       "2x2/2 Parallel Avg Pool", Ti, gap8_ncore());
+            break;
 		case 11:
 			IN = Mem; OUT = Mem+Wic*Hic; FILTER = Mem+Wic*Hic+(Wic-4)*(Hic-4); CheckMem(Wic*Hic+(Wic-4)*(Hic-4)+5*5);
 			Arg.In=IN; Arg.W=Wic; Arg.H=Hic; Arg.Filter = FILTER; Arg.Out=OUT; Arg.Norm = 6;
@@ -1249,17 +1275,24 @@ void RunTest(int Which, int Iter, int Trace, char *Mode,int * num_ops)
                        "2x2/2 Parallel Max Pool Vect", Ti, gap8_ncore());
             break;
 		case 15:
-			IN = Mem; OUT = Mem+Wi*Hi; CheckMem(Wi*Hi+(Wi/2)*(Hi/2));
-			Arg.In=IN; Arg.W=Wi; Arg.H=Hi; Arg.Out=OUT;
-			gap8_resethwtimer();
-			WriteGpio(GPIO, 1);
-			Ti = gap8_readhwtimer();
-			for (int i=0; i<Iter; i++) rt_team_fork(gap8_ncore(), (void *) ParAvgPoolingVect, (void *) &Arg);
-			Ti = gap8_readhwtimer() - Ti;
-			WriteGpio(GPIO, 0);
+            IN = Mem;
+            OUT = Mem + Wi * Hi;
+            CheckMem(Wi * Hi + (Wi / 2) * (Hi / 2));
+            Arg.In = IN;
+            Arg.W = Wi;
+            Arg.H = Hi;
+            Arg.Out = OUT;
+            gap8_resethwtimer();
+            WriteGpio(GPIO, 1);
+            Ti = gap8_readhwtimer();
+            for (int i = 0; i < Iter; i++) rt_team_fork(gap8_ncore(), (void *) ParAvgPoolingVect, (void *) &Arg);
+            Ti = gap8_readhwtimer() - Ti;
+            WriteGpio(GPIO, 0);
             *num_ops = Ti;
-			if (Trace) printf("[%2d][%s] %7d %35s: %8d cycles, %1d Cores\n", Which, Mode, (Wi/2)*(Hi/2)*Iter, "2x2/2 Parallel Avg Pool Vect", Ti, gap8_ncore());
-			break;
+            if (Trace)
+                printf("[%2d][%s] %7d %35s: %8d cycles, %1d Cores\n", Which, Mode, (Wi / 2) * (Hi / 2) * Iter,
+                       "2x2/2 Parallel Avg Pool Vect", Ti, gap8_ncore());
+            break;
 		case 16:
             IN = Mem;
             OUT = Mem + Wic * Hic;
@@ -1378,12 +1411,14 @@ int main() {
     float res, res_kernel;
     int cur_test = 0;
 
-#if !ALIM_1_VOLT
-    PMU_set_voltage(1150, 0);
-    PMU_set_voltage(1200, 0);
-#else
-    PMU_set_voltage(1000,0);
-#endif
+//#if !ALIM_1_VOLT
+//    PMU_set_voltage(1150, 0);
+//    PMU_set_voltage(1200, 0);
+//#else
+//    PMU_set_voltage(1000,0);
+//#endif
+    // RADIATION TEST EDIT
+    PMU_set_voltage(RAD_VOLT_SET, 0);
 
 #ifndef NOGPIO
     rt_padframe_profile_t *profile_gpio = rt_pad_profile_get("hyper_gpio");
@@ -1419,11 +1454,12 @@ int main() {
     rt_cluster_mount(MOUNT, CID, 0, NULL);
 
     //Set Fabric Controller and Cluster Frequencies
-    rt_freq_set(RT_FREQ_DOMAIN_FC, FREQ_FC);
-    rt_freq_set(RT_FREQ_DOMAIN_CL, FREQ_CL);
+    rt_freq_set(RT_FREQ_DOMAIN_FC, RAD_FREQ_SET_FC);
+    rt_freq_set(RT_FREQ_DOMAIN_CL, RAD_FREQ_SET_CL);
 
     cur_test = RAD_CNN_OP;
-    printf("Testing OP:%d--%s\n", RAD_CNN_OP, tests_names[RAD_CNN_OP]);
+    printf("OP:%d--%s VOLTAGE:%d FREQ_FC:%d FREQ_CL:%d\n", RAD_CNN_OP,
+           tests_names[RAD_CNN_OP], RAD_VOLT_SET, RAD_FREQ_SET_FC, RAD_FREQ_SET_CL);
 
 //    ---------------        Sequential   ---------------
 //    i 0 j 0 cur test 0 --                 2x2/2 Max Pool Input: 112x112
@@ -1466,7 +1502,7 @@ int main() {
     memcpy(filter_mem, filter_array, Wil * Hil);
     out_size = Hil;
 
-#elif RAD_CNN_OP == RAD_SEQUENTIAL_MAX_POOL || RAD_CNN_OP == RAD_PARALLEL_VECT_MAX_POOL
+#elif (RAD_CNN_OP == RAD_SEQUENTIAL_MAX_POOL || RAD_CNN_OP == RAD_PARALLEL_VECT_MAX_POOL) || (RAD_CNN_OP == RAD_SEQUENTIAL_AVG_MAX_POOL || RAD_CNN_OP == RAD_PARALLEL_VECT_AVG_MAX_POOL)
     input_mem = Mem;
     output_mem = Mem + Wi * Hi;
     memcpy(input_mem, input_array, Wi * Hi);
@@ -1523,7 +1559,7 @@ int main() {
         Additive5x5ConvolutionComparatorAndPrint(Wic, Hic, output_mem);
 #elif RAD_CNN_OP == RAD_SEQUENTIAL_LINEAR || RAD_CNN_OP == RAD_PARALLEL_VECT_LINEAR
         LinearComparatorAndPrint(out_size, golden_array, output_mem);
-#elif RAD_CNN_OP == RAD_SEQUENTIAL_MAX_POOL || RAD_CNN_OP == RAD_PARALLEL_VECT_MAX_POOL
+#elif (RAD_CNN_OP == RAD_SEQUENTIAL_MAX_POOL || RAD_CNN_OP == RAD_PARALLEL_VECT_MAX_POOL) || (RAD_CNN_OP == RAD_SEQUENTIAL_AVG_MAX_POOL || RAD_CNN_OP == RAD_PARALLEL_VECT_AVG_MAX_POOL)
         MaxPoolingAndPrint(Wi, Hi, golden_array, output_mem);
 #endif
 //        for (int i = 0; i < out_size; i++) {
