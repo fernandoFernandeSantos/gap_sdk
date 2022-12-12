@@ -1459,7 +1459,9 @@ int main() {
 
     cur_test = RAD_CNN_OP;
     printf("OP:%d--%s VOLTAGE:%d FREQ_FC:%d FREQ_CL:%d\n", RAD_CNN_OP,
-           tests_names[RAD_CNN_OP], RAD_VOLT_SET, RAD_FREQ_SET_FC, RAD_FREQ_SET_CL);
+           tests_names[RAD_CNN_OP], pi_pmu_voltage_get(PI_PMU_VOLTAGE_DOMAIN_CHIP),
+                                    pi_freq_get(PI_FREQ_DOMAIN_FC),
+                                    pi_freq_get(PI_FREQ_DOMAIN_CL)); //RAD_VOLT_SET, RAD_FREQ_SET_FC, RAD_FREQ_SET_CL);
 
 //    ---------------        Sequential   ---------------
 //    i 0 j 0 cur test 0 --                 2x2/2 Max Pool Input: 112x112
