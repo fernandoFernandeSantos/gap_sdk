@@ -22,6 +22,9 @@
 #ifndef __CPU_ISS_ISS_INSN_EXEC_HPP
 #define __CPU_ISS_ISS_INSN_EXEC_HPP
 
+// Fernando Fernandes FI
+#include "fault_injection.hpp"
+
 #if defined(ISS_HAS_PERF_COUNTERS)
 void update_external_pccr(iss_t *iss, int id, unsigned int pcer, unsigned int pcmr);
 #endif
@@ -55,9 +58,12 @@ static inline void iss_exec_insn_stall(iss_t *iss)
   iss->cpu.state.insn_cycles = -1;
 }
 
-static inline iss_insn_t *iss_exec_insn_handler(iss_t *instance, iss_insn_t *insn, iss_insn_t *(*handler)(iss_t *, iss_insn_t *))
-{
-  return handler(instance, insn);
+static inline iss_insn_t *iss_exec_insn_handler(iss_t *instance, iss_insn_t *insn,
+                                                iss_insn_t *(*handler)(iss_t *, iss_insn_t *)){
+//    iss_insn_t *before_ptr = insn;
+    iss_insn_t *after_ptr = handler(instance, insn);
+    fault_injection(instance, after_ptr);
+    return after_ptr;
 }
 
 

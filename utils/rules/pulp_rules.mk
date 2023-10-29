@@ -172,7 +172,7 @@ SIZE_OPT            = -B -x --common
 # Final binary
 #------------------------------------------
 # BUILDDIR in pmsis_rules.mk
-#BUILDDIR      = $(shell pwd)/BUILD$(build_dir_ext)/$(TARGET_CHIP)/GCC_RISCV
+BUILDDIR      = $(shell pwd)/BUILD$(build_dir_ext)/$(TARGET_CHIP)/GCC_RISCV
 
 APP          ?= test
 BIN           = $(BUILDDIR)/$(APP)
