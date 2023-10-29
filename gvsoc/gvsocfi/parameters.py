@@ -2,24 +2,24 @@ import os
 from common import FaultModel
 
 APP_PARAMETERS = {
-    ################################################
-    "MatrixAdd": {
-        # Path to the benchmark inside GAP SDK
-        "app_root_dir": "/home/carol/gap_sdk/examples/autotiler/MatrixAdd",
-        # Run script to execute the simulator
-        "run_script": "test_apps/MatrixAdd/run.sh",
-        # how much time the app is expected to run in seconds
-        "expected_run_time": 1,
-    },
-    ################################################
-    "MatMult": {
-        # Path to the benchmark inside GAP SDK
-        "app_root_dir": "/home/carol/gap_sdk/examples/autotiler/MatMult",
-        # Run script to execute the simulator
-        "run_script": "test_apps/MatMult/run.sh",
-        # how much time the app is expected to run in seconds
-        "expected_run_time": 2,
-    },
+    # ################################################
+    # "MatrixAdd": {
+    #     # Path to the benchmark inside GAP SDK
+    #     "app_root_dir": "/home/carol/gap_sdk/examples/autotiler/MatrixAdd",
+    #     # Run script to execute the simulator
+    #     "run_script": "test_apps/MatrixAdd/run.sh",
+    #     # how much time the app is expected to run in seconds
+    #     "expected_run_time": 1,
+    # },
+    # ################################################
+    # "MatMult": {
+    #     # Path to the benchmark inside GAP SDK
+    #     "app_root_dir": "/home/carol/gap_sdk/examples/autotiler/MatMult",
+    #     # Run script to execute the simulator
+    #     "run_script": "test_apps/MatMult/run.sh",
+    #     # how much time the app is expected to run in seconds
+    #     "expected_run_time": 2,
+    # },
     ################################################
     "Mnist": {
         # Path to the benchmark inside GAP SDK
@@ -29,33 +29,33 @@ APP_PARAMETERS = {
         # how much time the app is expected to run in seconds
         "expected_run_time": 2,
     },
-    ################################################
-    "Fir": {
-        # Path to the benchmark inside GAP SDK
-        "app_root_dir": "/home/carol/gap_sdk/examples/autotiler/Fir",
-        # Run script to execute the simulator
-        "run_script": "test_apps/Fir/run.sh",
-        # how much time the app is expected to run in seconds
-        "expected_run_time": 2,
-    },
-    ################################################
-    "BilinearResize": {
-        # Path to the benchmark inside GAP SDK
-        "app_root_dir": "/home/carol/gap_sdk/examples/autotiler/BilinearResize",
-        # Run script to execute the simulator
-        "run_script": "test_apps/BilinearResize/run.sh",
-        # how much time the app is expected to run in seconds
-        "expected_run_time": 1,
-    },
-    ################################################
-    "memradtest": {
-        # Path to the benchmark inside GAP SDK
-        "app_root_dir": "/home/carol/gap_sdk/examples/pmsis/memradtest",
-        # Run script to execute the simulator
-        "run_script": "test_apps/BilinearResize/run.sh",
-        # how much time the app is expected to run in seconds
-        "expected_run_time": 1,
-    }
+    # ################################################
+    # "Fir": {
+    #     # Path to the benchmark inside GAP SDK
+    #     "app_root_dir": "/home/carol/gap_sdk/examples/autotiler/Fir",
+    #     # Run script to execute the simulator
+    #     "run_script": "test_apps/Fir/run.sh",
+    #     # how much time the app is expected to run in seconds
+    #     "expected_run_time": 2,
+    # },
+    # ################################################
+    # "BilinearResize": {
+    #     # Path to the benchmark inside GAP SDK
+    #     "app_root_dir": "/home/carol/gap_sdk/examples/autotiler/BilinearResize",
+    #     # Run script to execute the simulator
+    #     "run_script": "test_apps/BilinearResize/run.sh",
+    #     # how much time the app is expected to run in seconds
+    #     "expected_run_time": 1,
+    # },
+    # ################################################
+    # "memradtest": {
+    #     # Path to the benchmark inside GAP SDK
+    #     "app_root_dir": "/home/carol/gap_sdk/examples/pmsis/memradtest",
+    #     # Run script to execute the simulator
+    #     "run_script": "test_apps/BilinearResize/run.sh",
+    #     # how much time the app is expected to run in seconds
+    #     "expected_run_time": 1,
+    # }
 }
 
 # Num of injections simulations that will execute
