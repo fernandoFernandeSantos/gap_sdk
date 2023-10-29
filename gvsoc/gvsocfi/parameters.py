@@ -23,7 +23,7 @@ APP_PARAMETERS = {
     ################################################
     "Mnist": {
         # Path to the benchmark inside GAP SDK
-        "app_root_dir": "/home/carol/gap_sdk/examples/autotiler/Mnist",
+        "app_root_dir": "/home/carol/gap_sdk/examples/gap8/nn/autotiler/Mnist",
         # Run script to execute the simulator
         "run_script": "test_apps/Mnist/run.sh",
         # how much time the app is expected to run in seconds
@@ -82,7 +82,7 @@ GAP_SDK_ROOT_DIR = "/home/carol/gap_sdk"
 GVSOC_ROOT_DIR = f"{GAP_SDK_ROOT_DIR}/gvsoc"
 
 # Set the GAPUINO version here
-GAPUINO_SOURCE_SCRIPT = f"{GAP_SDK_ROOT_DIR}/configs/gapuino_v2.sh"
+GAPUINO_SOURCE_SCRIPT = f"{GAP_SDK_ROOT_DIR}/configs/gapuino_v3.sh"
 
 # Default profiler file
 PROFILER_FILE = "gvsocfi-profiler-info.txt"
