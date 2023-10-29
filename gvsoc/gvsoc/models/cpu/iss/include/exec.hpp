@@ -26,6 +26,9 @@
 void update_external_pccr(iss_t *iss, int id, unsigned int pcer, unsigned int pcmr);
 #endif
 
+// Fernando Fernandes FI
+#include "fault_injection.hpp"
+
 static inline int iss_exec_account_cycles(iss_t *iss, int cycles);
 
 iss_insn_t *iss_exec_insn_with_trace(iss_t *iss, iss_insn_t *insn);
@@ -51,9 +54,11 @@ static inline void iss_exec_insn_stall(iss_t *iss)
 
 static inline iss_insn_t *iss_exec_insn_handler(iss_t *instance, iss_insn_t *insn, iss_insn_t *(*handler)(iss_t *, iss_insn_t *))
 {
-  return handler(instance, insn);
+//    iss_insn_t *before_ptr = insn;
+    iss_insn_t *after_ptr = handler(instance, insn);
+    fault_injection(instance, after_ptr);
+    return after_ptr;
 }
-
 
 static inline iss_insn_t *iss_exec_insn_fast(iss_t *iss, iss_insn_t *insn)
 {
