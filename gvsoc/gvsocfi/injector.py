@@ -148,11 +148,9 @@ def main():
         common.execute_command(command=f"mkdir -p {injection_logs_path}/")
 
         # Remove the instructions that do not have output
-        profile_df = profile_df[
-            # Select instructions that have only one output register
-            (profile_df["nb_out_reg"] != 1)
-            # TODO: Add fault injection for more than one output register
-        ]
+        # Select instructions that have only one output register
+        # TODO: Add fault injection for more than one output register
+        profile_df = profile_df[profile_df["nb_out_reg"] == 1]
         # print(profile_df[(profile_df["address"] == 469766476) & (profile_df["opcode"] == 552826243) &
         #                  (profile_df["cpu_config_mhartid"] == 2) & (profile_df["label"] == "p.lw")])
         # print(len(profile_df["cpu_config_mhartid"].unique()))
