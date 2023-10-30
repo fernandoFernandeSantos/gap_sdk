@@ -12,6 +12,7 @@ class FaultModel(Enum):
     DOUBLE_BIT_FLIP = 1
     ZERO_VALUE = 2
     RANDOM_VALUE = 3
+    DOUBLE_BIT_FLIP_2REG = 4
 
     def __str__(self) -> str:
         """Override the str method

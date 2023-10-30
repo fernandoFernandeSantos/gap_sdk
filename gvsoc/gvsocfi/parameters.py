@@ -67,7 +67,7 @@ VERBOSE = False
 
 # Timeout threshold to verify if the app get stuck (it will multiply by expected_run_time
 # the timeout will be calculated by expected_run_time * TIMEOUT_THRESHOLD
-TIMEOUT_THRESHOLD = 5
+TIMEOUT_THRESHOLD = 3
 
 # TODO: check if this is better to set manually outside of the script
 
