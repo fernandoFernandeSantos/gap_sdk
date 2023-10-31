@@ -51,7 +51,7 @@ def verify_output(app_logs_path: str, error_code: common.DUEType,
 
     if len(open(stdout_file, "rb").read()) == 0 and error_code != common.DUEType.TIMEOUT_ERROR and len(
             open(stderr_file, "rb").read()) == 0:
-        print("CHecking why pau", open(stdout_file).readlines(), open(stderr_file).readlines())
+        print("Check in case of error", open(stdout_file).readlines(), open(stderr_file).readlines())
         exit(1)
     golden_stdout_file = f"{app_logs_path}/{parameters.DEFAULT_GOLDEN_STDOUT_FILE}"
     golden_stderr_file = f"{app_logs_path}/{parameters.DEFAULT_GOLDEN_STDERR_FILE}"
@@ -175,7 +175,8 @@ def main():
         clock.toc()
 
         # Save the results
-        final_injection_data_path = f"{app_logs_path}/{parameters.FINAL_INJECTION_DATA.format(app_num_injections)}"
+        final_injection_data_path = parameters.FINAL_INJECTION_DATA.format(app_num_injections, parameters.FAULT_MODEL)
+        final_injection_data_path = f"{app_logs_path}/{final_injection_data_path}"
         print("Fault injection finished, total spent time:", clock, " - Saving final results on:",
               final_injection_data_path)
         profile_df.to_csv(final_injection_data_path, sep=";", index=False)
