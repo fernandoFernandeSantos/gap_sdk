@@ -1,8 +1,11 @@
 #!/usr/bin/python3
-import filecmp
 import os
 from typing import Tuple
 import re
+
+import sys
+
+sys.path.insert(0, '../')
 
 import common
 import parameters
@@ -68,27 +71,25 @@ def parse_mat_add(log_lines: list, error_dict: dict) -> dict:
 
 
 def parse_mnist(log_lines: list, error_dict: dict) -> dict:
-    error_dict["CRITICAL_SDC"] = 1
-
-    mnist_gold_stdout = [f"{i}: Confidence: -32768" for i in range(10)]
-    mnist_gold_stdout[6] = "6: Confidence: 30228"
-    mnist_dict = {i: False for i in mnist_gold_stdout}
-
+    error_dict["CRITICAL_SDC"], error_dict["SDC"] = 0, 0
+    lines = 0
+    # 6: Confidence: 30228
     for line in log_lines:
-        # If there is something on STDOUT there is an SDC
-        m = re.match(r".*Recognized number *: *(\d+)", line)
-        if m and int(m.group(1)) == 6:
-            error_dict["CRITICAL_SDC"] = 0
-        # Check the SDC
-        for line_gold in mnist_dict:
-            if line_gold in line:
-                mnist_dict[line_gold] = True
-                break
+        m = re.match(r"(\d+): Confidence:(.*)", line)
+        if m:
+            lines += 1
+            num, confidence = map(int, m.groups())
+            if num != 6 and confidence != -32768:
+                error_dict["SDC"] = 1
+            if num == 6 and confidence != 30228:
+                error_dict["SDC"] = 1
+        critical = re.match(r"Recognized number :(.*)", line)
+        if "Recognized number" in line and int(critical.group(1)) != 6:
+            error_dict["CRITICAL_SDC"] = 1
 
-    if all(mnist_dict.values()):
-        error_dict["SDC"] = 0
-    else:
-        error_dict["SDC"] = 1
+    if error_dict["test_success_found"]:
+        assert lines == 10, f"Incorrect parsing {lines}\n{error_dict}\n{log_lines}"
+
     return error_dict
 
 
@@ -174,7 +175,7 @@ def parse_injected_fault(row: pd.Series, app_name: str):
     row["was_fault_injected"] = was_fault_injected
     # row["DUE"] = int(is_file_empty is False)
     row["GVSOC_error_state"] = stdout_err_msg
-
+    row["GVSOC_crash"] = gvsoc_crash
     # the DUE has precedence
     if was_fault_injected is False:
         row["SDC"] = row["DUE"] = False
@@ -186,12 +187,13 @@ def main():
     clock = common.Timer()
     clock.tic()
     final_csv = dict()
+    num_fis = parameters.NUM_INJECTIONS
     # Profiling all the apps on parameters.apps_parameters
     for app_name, app_parameters in parameters.APP_PARAMETERS.items():
         # Create the logdir specific for the app
         app_logs_path = f"{parameters.GVSOCFI_LOGS_DIR}/{app_name}"
         injection_data_path = f"{app_logs_path}"
-        injection_data_path += f"/{parameters.FINAL_INJECTION_DATA.format(parameters.NUM_INJECTIONS)}"
+        injection_data_path += f"/{parameters.FINAL_INJECTION_DATA.format(num_fis)}"
         fault_injection_df = pd.read_csv(injection_data_path, sep=";", index_col=False)
         # Convert to enum
         fault_injection_df["error_code"] = fault_injection_df["error_code"].apply(lambda x: common.DUEType[x])
@@ -204,7 +206,7 @@ def main():
         final_csv[app_name] = fault_injection_df
     clock.toc()
     # Save the results
-    final_injection_data_path = "/home/carol/gvsocfi/data/gvsocfi_database.csv"
+    final_injection_data_path = f"../logs/gvsocfi_parsed_fi_database_{num_fis}.csv"
     print("Time to parse results:", clock, " - Saving final results on:", final_injection_data_path)
     # It is necessary to save both levels of index
     final_csv = pd.concat(final_csv).reset_index().rename(columns={"level_1": "injection_it", "level_0": "app"})

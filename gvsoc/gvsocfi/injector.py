@@ -81,6 +81,70 @@ def verify_output(app_logs_path: str, error_code: common.DUEType,
     return sdc, due, outcome, was_fault_injected
 
 
+def inject_sample_faults_iter_rows(df: pd.DataFrame, app_name: str, app_parameters: dict,
+                                   num_injections_per_run: int) -> pd.DataFrame:
+    app_logs_path = f"{parameters.GVSOCFI_LOGS_DIR}/{app_name}"
+    injection_data = list()
+    for injection_it, row_group in df.groupby(np.arange(len(df)) // num_injections_per_run):
+        inj_clock = common.Timer()
+        inj_clock.tic()
+        injection_logs_path = f"{app_logs_path}/{parameters.APP_INJECTION_FOLDER_BASE}/inj-{injection_it}"
+        # Create/Clean the output path
+        common.execute_command(command=f"mkdir -p {injection_logs_path}")
+        common.execute_command(command=f"rm {injection_logs_path}/*")
+
+        # Inject the fault
+        run_cmd = app_parameters["run_script"]
+        injection_info_file = f"{injection_logs_path}/{parameters.GVSOCFI_INJECTION_IN_FILE}"
+        injection_log_file = f"{injection_logs_path}/{parameters.GVSOCFI_INJECTION_OUT_FILE}"
+        stdout_file = f"{injection_logs_path}/{parameters.DEFAULT_STDOUT_FILE}"
+        stderr_file = f"{injection_logs_path}/{parameters.DEFAULT_STDERR_FILE}"
+
+        set_environment_vars = [("GVSOCFI_RUN_TYPE", str(common.RunMode.INST_INJECTOR)),
+                                ("GVSOCFI_INJECTION_IN_FILE", injection_info_file),
+                                ("GVSOCFI_INJECTION_OUT_FILE", injection_log_file),
+                                ("STDOUT_FILE", stdout_file),
+                                ("STDERR_FILE", stderr_file)]
+
+        # Put the contents in the info file
+        row_dict = dict()
+        with open(injection_info_file, "w") as inj_fp:
+            inj_fp.write(f"{num_injections_per_run}\n")
+            for group_name, group_data in row_group:
+                row_dict["gvsoc_fi_mask"] = create_injection_mask(output_register_val=group_data["out_reg0"],
+                                                                  output_register_byte_size=group_data["size"])
+                lines_to_write = [group_data["iteration_counter_gvsocfi"], row_dict["gvsoc_fi_mask"],
+                                  group_data["out_reg0"],
+                                  # row["address"], row["opcode"], row["size"],
+                                  group_data["cpu_config_mhartid"], group_data["label"]]
+                inj_fp.writelines("\n".join(map(str, lines_to_write)))
+
+        timeout = app_parameters["expected_run_time"] * parameters.TIMEOUT_THRESHOLD
+        # default files
+        exec_stdout, exec_stderr, error_code = common.execute_gvsoc(
+            command=run_cmd,
+            gapuino_source_script=parameters.GAPUINO_SOURCE_SCRIPT,
+            gvsoc_fi_env=set_environment_vars, timeout=timeout
+        )
+        sdc, due, outcome, was_fault_injected = verify_output(
+            app_logs_path=app_logs_path, error_code=error_code,
+            injection_log_file=injection_log_file,
+            injection_logs_path=injection_logs_path,
+            stdout_file=stdout_file, stderr_file=stderr_file,
+            exec_stdout=exec_stdout, exec_stderr=exec_stderr
+        )
+
+        row_dict["SDC"], row_dict["DUE"] = sdc, due
+        row_dict["was_fault_injected"] = was_fault_injected
+        row_dict["error_code"] = str(error_code)
+        injection_data.append(row_dict)
+        # clean the system before continue
+        kill_simulator_after_injection()
+        inj_clock.toc()
+        print("Injecting fault num:", injection_it, "App:", app_name, "Outcome:", outcome, "exec time:", inj_clock)
+    return pd.DataFrame(injection_data)
+
+
 def inject_sample_faults(row: pd.Series, app_name: str, app_parameters: dict) -> pd.Series:
     inj_clock = common.Timer()
     inj_clock.tic()
@@ -171,7 +235,10 @@ def main():
 
         # Inject sampled faults
         clock.tic()
-        profile_df = profile_df.apply(inject_sample_faults, args=(app_name, app_parameters), axis="columns")
+        # profile_df = profile_df.apply(inject_sample_faults, args=(app_name, app_parameters), axis="columns")
+        num_injections_per_run = 2 if common.FaultModel.DOUBLE_BIT_FLIP_2REG else 1
+        fi_df = inject_sample_faults_iter_rows(df=profile_df, app_name=app_name, app_parameters=app_parameters,
+                                               num_injections_per_run=num_injections_per_run)
         clock.toc()
 
         # Save the results
@@ -180,7 +247,7 @@ def main():
         final_injection_data_path = f"{app_logs_path}/{final_injection_data_path}"
         print("Fault injection finished, total spent time:", clock, " - Saving final results on:",
               final_injection_data_path)
-        profile_df.to_csv(final_injection_data_path, sep=";", index=False)
+        fi_df.to_csv(final_injection_data_path, sep=";", index=False)
 
 
 if __name__ == '__main__':
