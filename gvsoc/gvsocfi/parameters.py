@@ -99,7 +99,7 @@ PROFILER_FIELDS = [
 
 GVSOCFI_INJECTION_IN_FILE = "gvsocfi-injection-in.txt"
 GVSOCFI_INJECTION_OUT_FILE = "gvsocfi-injection-out.txt"
-FINAL_INJECTION_DATA = "gvsocfi-injection-data-results-{}.csv"
+FINAL_INJECTION_DATA = "gvsocfi-injection-data-results-{fault_num}-{fault_model}.csv"
 APP_INJECTION_FOLDER_BASE = "injection-logs"
 
 # Default stdout and stderr files

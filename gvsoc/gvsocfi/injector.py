@@ -175,7 +175,8 @@ def main():
         clock.toc()
 
         # Save the results
-        final_injection_data_path = parameters.FINAL_INJECTION_DATA.format(app_num_injections, parameters.FAULT_MODEL)
+        final_injection_data_path = parameters.FINAL_INJECTION_DATA.format(fault_num=app_num_injections,
+                                                                           fault_model=parameters.FAULT_MODEL)
         final_injection_data_path = f"{app_logs_path}/{final_injection_data_path}"
         print("Fault injection finished, total spent time:", clock, " - Saving final results on:",
               final_injection_data_path)
