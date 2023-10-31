@@ -3,7 +3,7 @@
 set -e
 
 # Cleaning old files
-rm -r logs/*
+rm -rf logs/*
 
 GAP_SDK_HOME=/home/carol/gap_sdk
 

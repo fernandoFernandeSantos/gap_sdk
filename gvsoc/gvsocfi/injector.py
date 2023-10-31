@@ -22,7 +22,7 @@ def create_injection_mask(output_register_val: int, output_register_byte_size: i
         base_string[random_bit] = '1'
         base_string[random_bit - 1] = '1'
     elif parameters.FAULT_MODEL == common.FaultModel.RANDOM_VALUE:
-        base_string = np.random.randint(0, 2, 32).tolist()
+        base_string = list(map(str, np.random.randint(0, 2, bit_size).tolist()))
     elif parameters.FAULT_MODEL == common.FaultModel.ZERO_VALUE:
         base_string = f'{output_register_val:0{bit_size}b}'
 
