@@ -12,25 +12,21 @@
 #include "CNN_Generators.h"
 
 
-void MnistModel(unsigned int L1Memory, unsigned int L2Memory)
+void MnistModel(unsigned int L1Memory)
 
 {
     // Always inline user kernels
     SetInlineMode(ALWAYS_INLINE);
     // L1 and L2 symbols are dynamic
     SetSymbolDynamics();
+    // C symbols used by the AutoTiler
+    SetSymbolNames("Mnist_L1_Memory", "Mnist_L2_Memory");
     // Standard data types are used, we import CNN basic kernels
     SetUsedFilesNames(0, 1, "CNN_BasicKernels.h");
     // Auto Tiler generated files
     SetGeneratedFilesNames("MnistKernels.c", "MnistKernels.h");
     // L1 shared memory given to Auto Tiler
-    SetMemoryDeviceInfos(4,
-            AT_MEM_L1, L1Memory, "Mnist_L1_Memory", 0, 0,
-            AT_MEM_L2, L2Memory, "Mnist_L2_Memory", 0, 0,
-            AT_MEM_L3_DEFAULTRAM, 8*1024*1024, "Mnist_L3_Memory", 0, 1,
-            AT_MEM_L3_DEFAULTFLASH, 20*1024*1024, "0", "Cnn_Flash_Const.dat", 0
-            );
-
+    SetL1MemorySize(L1Memory);
     // To use the Reordering you need to define a graph
     AT_SetGraphCtrl(AT_GRAPH_REORDER_CONSTANT_IN, AT_OPT_OFF);
 
@@ -56,7 +52,7 @@ int main(int argc, char **argv)
         printf("Failed to initialize or incorrect output arguments directory.\n"); return 1;
     }
     // Set Auto Tiler configuration, given shared L1 memory is 51200
-    MnistModel(45000, 300000);
+    MnistModel(45000);
     // Generate code
     GenerateTilingCode();
     return 0;

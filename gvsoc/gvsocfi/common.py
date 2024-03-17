@@ -5,20 +5,28 @@ import subprocess
 from enum import Enum
 from typing import Tuple, Optional, Union
 import time
+import argparse
 
 
 class FaultModel(Enum):
     SINGLE_BIT_FLIP = 0
-    DOUBLE_BIT_FLIP = 1
+    DOUBLE_CELL_FLIP = 1
     ZERO_VALUE = 2
     RANDOM_VALUE = 3
     DOUBLE_BIT_FLIP_2REG = 4
+    HALF_LOWER_BITS = 5
+    HALF_HIGHER_BITS = 6
+    MEMORY_CELL_BASED_ON_BEAM = 7
+    INSTRUCTION_OUTPUT_95PCT_SINGLE = 8
 
     def __str__(self) -> str:
         """Override the str method
         :return: the name of the enum as string
         """
         return self.name
+
+    def __eq__(self, other) -> bool:
+        return str(other) == str(self.name)
 
 
 class RunMode(Enum):
@@ -126,3 +134,33 @@ def execute_gvsoc(command: str, gapuino_source_script: str, gvsoc_fi_env: Option
         due_type = DUEType.POSSIBLE_GVSOC_CRASH
 
     return out, err, due_type
+
+
+# fault model for the campaigns
+# FAULT_MODEL = FaultModel.SINGLE_BIT_FLIP
+FAULT_MODELS = [
+    FaultModel.SINGLE_BIT_FLIP,
+    FaultModel.DOUBLE_CELL_FLIP,
+    FaultModel.RANDOM_VALUE,
+    FaultModel.ZERO_VALUE
+]
+
+# Fault models
+MEMORY, INSTRUCTION_OUTPUT = "GVSOCFI_MEM_RUN_TYPE", "GVSOCFI_RUN_TYPE"
+
+# FAULT_INJECTION_MODE = INSTRUCTION_OUTPUT
+FAULT_INJECTION_SITE = INSTRUCTION_OUTPUT
+
+POSSIBLE_FAULT_SITES = [MEMORY, INSTRUCTION_OUTPUT]
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(prog='GVSoCFI', description='A GVSoC based Fault Injector')
+    parser.add_argument('-f', '--fault_site', default=INSTRUCTION_OUTPUT,
+                        help=f"Fault site to inject:{POSSIBLE_FAULT_SITES}")
+
+    args = parser.parse_args()
+
+    assert args.fault_site in POSSIBLE_FAULT_SITES, (f"Not a valid fault site, "
+                                                     f"options:{POSSIBLE_FAULT_SITES}")
+    return args

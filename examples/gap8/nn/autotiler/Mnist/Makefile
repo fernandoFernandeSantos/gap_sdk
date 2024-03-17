@@ -26,9 +26,9 @@ include $(RULES_DIR)/at_common_decl.mk
 
 APP_SRCS += Mnist.c MnistKernels.c \
             $(CNN_LIB) \
-            $(GAP_SDK_HOME)/libs/gap_lib/img_io/ImgIO.c
+            ImgIO.c
 
-APP_INC += $(TILER_INC) $(TILER_EMU_INC) $(GAP_SDK_HOME)/libs/gap_lib/include
+APP_INC += $(TILER_INC) $(TILER_EMU_INC)
 
 APP_CFLAGS += -w -O3 -mno-memcpy -fno-tree-loop-distribute-patterns -fdata-sections -ffunction-sections
 APP_CFLAGS += -Wno-maybe-uninitialized -Wno-unused-but-set-variable $(CNN_LIB_INCLUDE)
@@ -44,11 +44,11 @@ USE_PMSIS_BSP = 1
 all:: model
 
 # Build the code generator
-GenMnist: MnistModel.c
+GenTile:
 	gcc -o GenMnist -fcommon -I$(TILER_INC) -I$(TILER_EMU_INC) $(CNN_GEN_INCLUDE) MnistModel.c $(CNN_GEN) $(TILER_LIB)
 
 # Run the code generator
-MnistKernels.c: GenMnist
+MnistKernels.c: GenTile
 	./GenMnist
 
 model: MnistKernels.c
@@ -58,4 +58,4 @@ clean::
 
 .PHONY: model clean
 
-include $(RULES_DIR)/pmsis_rules.mk
+include $(GAP_SDK_HOME)/utils/rules/pmsis_rules.mk

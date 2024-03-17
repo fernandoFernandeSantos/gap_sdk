@@ -7,7 +7,7 @@ setupcrosscompile()
 set(TARGET_NAME "Mnist")
 project(${TARGET_NAME} C ASM)
 
-set(GWT_PMSIS_BSP ${CONFIG_GAP_SDK_HOME}/rtos/pmsis/bsp)
+set(GWT_PMSIS_BSP ${CONFIG_GAP_SDK_HOME}/rtos/pmsis/pmsis_bsp)
 
 #===================================================================================================
 # Paths

@@ -25,6 +25,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "memory_fault_injection.hpp"
 class memory : public vp::component
 {
 
@@ -162,8 +163,10 @@ vp::io_req_status_e memory::req(void *__this, vp::io_req *req)
         _this->check_mem[(offset + i) / 8] |= 1 << ((offset + i) % 8);
       }
     }
-    if (data)
-      memcpy((void *)&_this->mem_data[offset], (void *)data, size);
+    if (data) {
+        memcpy((void *) &_this->mem_data[offset], (void *) data, size);
+        memory_fault_injection(&_this->mem_data[offset], offset, size, _this->size);
+    }
   } else {
     if (_this->check_mem) {
       for (unsigned int i=0; i<size; i++) {

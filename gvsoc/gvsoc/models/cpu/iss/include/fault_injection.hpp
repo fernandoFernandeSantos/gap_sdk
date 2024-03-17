@@ -69,10 +69,10 @@ static InjectionInfo select_injection_info(int mhartid, char *current_label, Inj
         auto &inj_inf = injection_data[i];
         if (inj_inf.injection_counter == iteration_counter_gvsocfi && inj_inf.cpu_config_mhartid == mhartid &&
             inj_inf.instruction_label == current_label) {
-            current_inf = inj_inf;
+            return inj_inf;
         }
     }
-    return current_inf;
+    return {};
 }
 
 static void inst_injector(iss_t *iss_wrapper_instance, iss_insn_t *insn) {
@@ -99,8 +99,8 @@ static void inst_injector(iss_t *iss_wrapper_instance, iss_insn_t *insn) {
             auto num_of_injections = 0u;
             injection_input_file_stream >> num_of_injections;
             if (num_of_injections > MAX_MULTIPLE_FAULTS_NUM) {
-                GVSOFI_FATAL("The injector is trying to inject more than maximum number of faults per rum: " +
-                             std::string(MAX_MULTIPLE_FAULTS_NUM))
+                GVSOFI_FATAL("The injector is trying to inject more than maximum number of faults per run: " +
+                             std::to_string(MAX_MULTIPLE_FAULTS_NUM));
             }
             for (auto i = 0; i < num_of_injections; i++) {
                 auto &inj_inf = injection_data[i];
@@ -141,10 +141,20 @@ static void inst_injector(iss_t *iss_wrapper_instance, iss_insn_t *insn) {
             );
         }
         insn->out_regs[0] = insn->out_regs[0] ^ selected_inj.gvsoc_fi_mask;
+        std::cout << "FAULT_INJECTED_HERE\n";
+
         std::ofstream injection_output_file_stream(injection_output_file);
         if (injection_output_file_stream.good()) {
             injection_output_file_stream << "reg val before:" << reg_val_before
                                          << " reg val after:" << insn->out_regs[0] << std::endl;
+            injection_output_file_stream << "variables set\n";
+
+            injection_output_file_stream << "injection_counter:" << selected_inj.injection_counter << std::endl;
+            injection_output_file_stream << "gvsoc_fi_mask:" << selected_inj.gvsoc_fi_mask << std::endl;
+            injection_output_file_stream << "reg_val_before_from_file:" << selected_inj.reg_val_before_from_file
+                                         << std::endl;
+            injection_output_file_stream << "cpu_config_mhartid:" << selected_inj.cpu_config_mhartid << std::endl;
+            injection_output_file_stream << "instruction_label:" << selected_inj.instruction_label << std::endl;
         } else {
             GVSOFI_FATAL("Not able to read the injection output file:" + injection_output_file);
         }
