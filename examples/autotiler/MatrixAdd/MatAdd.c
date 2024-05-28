@@ -69,7 +69,7 @@ void run_MatAdd(void) {
         printf("Memory Allocation Error! Quit...");
         pmsis_exit(-2);
     }
-    printf("Allocated: %p, for %d bytes\n", L1_Memory, _L1_Memory_SIZE);
+//    printf("Allocated: %p, for %d bytes\n", L1_Memory, _L1_Memory_SIZE);
     start_counters();
     int its = 0;
 
@@ -108,12 +108,12 @@ void run_MatAdd(void) {
     end_counters();
 
     if (errors != 0){
-        printf("ErrorIt:%d\n", its);
+        printf("EIt:%d\n", its);
         print_iteration_perf(its);
         for (int i = 0; i < MAT_SIZE; i++) {
             const int gold = i + SUM_INPUT;
             if (MatOut[i] != gold) {
-                printf("Error:[%d]=%d != %d\n", i, MatOut[i], gold);
+                printf("%d=%d != %d\n", i, MatOut[i], gold);
             }
         }
     }
@@ -122,7 +122,7 @@ void run_MatAdd(void) {
 //    printf("Close cluster after end of computation.\n");
     pi_cluster_close(&cluster_dev);
 
-    printf("Test %s with %ld error(s) !\n", (errors) ? "failed" : "success", errors);
+    printf("Test %s with %ld error(s)!\n", (errors) ? "failed" : "success", errors);
 
     pmsis_exit(errors);
 }

@@ -16,11 +16,17 @@
 #include "MnistCoeffs.h"
 #include "../performance_counter.h"
 
+#if GET_LAYERS_OUT == 1
+#undef SETUP_RADIATION_ITERATIONS
+#define SETUP_RADIATION_ITERATIONS 1
+#endif
+
 #if defined(ENABLE_BRIDGE)
 #include "ImgIO.h"
 #else
 
 #include "golden.h"
+#include "layers_goldens.h"
 
 #endif  /* USE_BRIDGE */
 
@@ -103,23 +109,86 @@ void Check(char *Mess, short int *Planes, int NPlane, int W, int H) {
     }
 }
 
-static void RunMnist(void *arg) {
-    const int16_t golden[10] = {-32768, -32768, -32768, -32768, -32768, -32768, 30228, -32768, -32768, -32768};
+
+void get_layer_values(int16_t *out_layer, uint32_t layer_size, char* inout) {
+#if GET_LAYERS_OUT
+    printf("\nint16_t %s_layer_%d[] = {", inout, LAYER_TO_TEST);
+    for (int i = 0; i < layer_size; i++) {
+        printf("%d, ", out_layer[i]);
+    }
+    printf("};\n\n");
+#endif
+}
+
+static void GenerateLayersInOut(void *arg) {
+//Out_Layer_Size[0] = (24 * 24 * sizeof(int16_t) * 32);
+//Out_Layer_Size[1] = (4 * 4 * sizeof(int16_t) * 64);
+//Out_Layer_Size[2] = (1 * 1 * sizeof(int16_t) * 10);
+    uint32_t layer_sizes[] = {(24 * 24 * 32), (4 * 4 * 64), (1 * 1 * 10)};
+    uint32_t layer_size = layer_sizes[LAYER_TO_TEST];
+    uint32_t img_w = 28, img_h = 28;
+    uint32_t size_img_in = 0, size_img_in_real = 0;
+    size_img_in = img_w * img_h * sizeof(uint16_t);
+    size_img_in_real = img_w * img_h * sizeof(uint8_t);
 
     Conv5x5ReLUMaxPool2x2_0((int16_t *) image_in,
                             Filter_Layer[0],
                             Bias_Layer[0],
                             Out_Layer[0]);
+#if LAYER_TO_TEST == 0
+
+    get_layer_values(Out_Layer[0], layer_size, "output");
+#endif
 
     Conv5x5ReLUMaxPool2x2_1(Out_Layer[0],
                             Filter_Layer[1],
                             Bias_Layer[1],
                             Out_Layer[1]);
+#if LAYER_TO_TEST == 1
+    get_layer_values(Out_Layer[1], layer_size);
+#endif
 
     LinearLayerReLU_1(Out_Layer[1],
                       Filter_Layer[2],
                       Bias_Layer[2],
                       Out_Layer[2]);
+#if LAYER_TO_TEST == 2
+    get_layer_values(Out_Layer[2], layer_size);
+#endif
+
+}
+
+static void RunMnist(void *arg) {
+//Out_Layer_Size[0] = (24 * 24 * sizeof(int16_t) * 32);
+//Out_Layer_Size[1] = (4 * 4 * sizeof(int16_t) * 64);
+//Out_Layer_Size[2] = (1 * 1 * sizeof(int16_t) * 10);
+    uint32_t layer_sizes[] = {(24 * 24 * 32), (4 * 4 * 64), (1 * 1 * 10)};
+    uint32_t layer_size = layer_sizes[LAYER_TO_TEST];
+
+#if LAYER_TO_TEST == 0
+    Conv5x5ReLUMaxPool2x2_0((int16_t *) image_in,
+                            Filter_Layer[0],
+                            Bias_Layer[0],
+                            Out_Layer[0]);
+
+    get_layer_output(Out_Layer[0], layer_size);
+#elif LAYER_TO_TEST == 1
+    Conv5x5ReLUMaxPool2x2_1(Out_Layer[0],
+                            Filter_Layer[1],
+                            Bias_Layer[1],
+                            Out_Layer[1]);
+    get_layer_output(Out_Layer[1], layer_size);
+
+#elif LAYER_TO_TEST == 2
+    LinearLayerReLU_1(Out_Layer[1],
+                      Filter_Layer[2],
+                      Bias_Layer[2],
+                      Out_Layer[2]);
+    get_layer_output(Out_Layer[2], layer_size);
+
+#else
+#error "Not valid LAYER_TO_TEST"
+#endif
 
 //    uint8_t *digit = (uint8_t *) arg;
 //    int16_t highest = Out_Layer[2][0];
@@ -134,14 +203,18 @@ static void RunMnist(void *arg) {
 //            *digit = i;
 //        }
 //    }
-    uint32_t * errors = (uint32_t * )
+    uint32_t *errors = (uint32_t * )
     arg;
     *errors = 0;
 //    Out_Layer[2][5]= 30228;
 
-    for (uint8_t i = 0; i < 10; i++) {
-        *errors += (Out_Layer[2][i] != golden[i]);
+
+#if GET_LAYERS_OUT != 1
+    for (uint8_t i = 0; i < layer_size; i++) {
+        *errors += (Out_Layer[LAYER_TO_TEST][i] != golden[i]);
     }
+#endif
+
 }
 
 void compare_output(int its, uint32_t errors_setup) {

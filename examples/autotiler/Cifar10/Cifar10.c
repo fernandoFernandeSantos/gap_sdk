@@ -15,6 +15,8 @@
 #include "Cifar10Kernels.h"
 #include "CifarData.h"
 
+#include "../performance_counter.h"
+
 /* Variables used. */
 //#define DEBUG
 
@@ -27,6 +29,7 @@
 #ifdef COEF_L2
 #include "coef/CifarCoeff.h"
 #else
+
 #include "bsp/bsp.h"
 #include "bsp/fs.h"
 #include "bsp/fs/readfs.h"
@@ -34,7 +37,9 @@
 #ifdef QSPI_BOARD
 #include "bsp/flash/spiflash.h"
 #else
+
 #include "bsp/flash/hyperflash.h"
+
 #endif
 
 #define  BUFFER_SIZE   (1024)
@@ -56,82 +61,77 @@ int16_t *buff;
 #endif  /* COEF_L2 */
 
 uint16_t *Filter_Layer[3] = {0};
-uint16_t *Bias_Layer[3]= {0};
+uint16_t *Bias_Layer[3] = {0};
 uint32_t Filter_Layer_Size[3] = {0};
-uint32_t Bias_Layer_Size[3]= {0};
+uint32_t Bias_Layer_Size[3] = {0};
 int16_t *Out_Layer[3];
 uint32_t Out_Layer_Size[3] = {0};
 
-int ConvAt(short *In, short int *Filter, unsigned int X, unsigned int Y, unsigned int W, unsigned int H, unsigned int Norm)
-{
+int ConvAt(short *In, short int *Filter, unsigned int X, unsigned int Y, unsigned int W, unsigned int H,
+           unsigned int Norm) {
     int i, j;
     int Acc = 0;
     int K = 5;
 
-    for (i=0; i<K; i++) {
-        for (j=0; j<K; j++) {
-            Acc += In[(X+i)*W+Y+j]*Filter[K*i+j];
+    for (i = 0; i < K; i++) {
+        for (j = 0; j < K; j++) {
+            Acc += In[(X + i) * W + Y + j] * Filter[K * i + j];
         }
     }
     return (gap_clip(gap_roundnorm_reg(Acc, Norm), 15));
 }
 
 
-void DumpPlane(char *Mess, short int *Plane, unsigned int W, unsigned int H)
-{
+void DumpPlane(char *Mess, short int *Plane, unsigned int W, unsigned int H) {
     unsigned int i, j;
 
     printf("----------------- %s ------------------------\n", Mess);
-    for (i=0; i<H; i++) {
+    for (i = 0; i < H; i++) {
         printf("%2d: ", i);
-        for (j=0; j<W; j++) {
-            printf("%4x ", (unsigned short) Plane[i*W+j]);
+        for (j = 0; j < W; j++) {
+            printf("%4x ", (unsigned short) Plane[i * W + j]);
         }
         printf("\n");
     }
     printf("-----------------------------------------\n");
 }
 
-void DumpPaddedCoeff(char *Name, short int *C, unsigned int NTap, unsigned int NFilter)
-{
+void DumpPaddedCoeff(char *Name, short int *C, unsigned int NTap, unsigned int NFilter) {
     unsigned int i, j;
     printf("L2_MEM short int %s[] = {\n", Name);
-    for (i=0; i<NFilter; i++) {
-        for (j=0; j<NTap; j++) {
-            printf("%d, ", C[i*NTap+j]);
+    for (i = 0; i < NFilter; i++) {
+        for (j = 0; j < NTap; j++) {
+            printf("%d, ", C[i * NTap + j]);
         }
         printf("0,\n");
     }
     printf("};\n");
 }
 
-unsigned int CheckSum(short int *In, int Size)
-{
+unsigned int CheckSum(short int *In, int Size) {
     int i;
-    unsigned S=0;
+    unsigned S = 0;
 
-    for (i=0; i<Size; i++) S += In[i];
+    for (i = 0; i < Size; i++) S += In[i];
     return S;
 }
 
-void Check(char *Mess, short int *Planes, int NPlane, int W, int H)
-{
+void Check(char *Mess, short int *Planes, int NPlane, int W, int H) {
     int i;
 
     printf("Check sum for %s\n", Mess);
 
-    for (i=0; i<NPlane; i++) {
-        printf("\t%2d: %x\n", i, CheckSum(Planes + i*(W*H), W*H));
+    for (i = 0; i < NPlane; i++) {
+        printf("\t%2d: %x\n", i, CheckSum(Planes + i * (W * H), W * H));
     }
 }
 
 #if !defined(COEF_L2)
-void CopyFileFromFlashToL3(struct pi_device *fs, char *file_name, uint32_t *_buff, uint32_t *_size)
-{
+
+void CopyFileFromFlashToL3(struct pi_device *fs, char *file_name, uint32_t *_buff, uint32_t *_size) {
     DEBUG_PRINTF("Loading layer \"%s\" from FS to L3\n", file_name);
     file = pi_fs_open(fs, file_name, 0);
-    if (file == NULL)
-    {
+    if (file == NULL) {
         printf("File open failed !\n");
         pmsis_exit(-1);
     }
@@ -151,17 +151,15 @@ void CopyFileFromFlashToL3(struct pi_device *fs, char *file_name, uint32_t *_buf
     uint32_t size_total = 0;
     uint32_t size = 0;
     pi_task_t task;
-    do
-    {
+    do {
         size = pi_fs_read_async(file, buff, BUFFER_SIZE, pi_task_block(&task));
         pi_task_wait_on(&task);
         size = ((size + 3) & ~3);
-        if (size)
-        {
+        if (size) {
 #ifdef QSPI_BOARD
             pi_ram_write(&QspiRam, (uint32_t) (*_buff+size_total), buff, size);
 #else
-            pi_ram_write(&HyperRam, (uint32_t) (*_buff+size_total), buff, size);
+            pi_ram_write(&HyperRam, (uint32_t)(*_buff + size_total), buff, size);
 #endif
             size_total += size;
         }
@@ -171,35 +169,63 @@ void CopyFileFromFlashToL3(struct pi_device *fs, char *file_name, uint32_t *_buf
     pi_fs_seek(file, 0);
     pi_fs_close(file);
 }
+
 #endif  /* COEF_L2 */
 
-static void RunCifar10(void *arg)
-{
+static void RunCifar10(void *arg) {
     DEBUG_PRINTF("Cluster: Start to run Cifar10\n");
+    int16_t golden[] = {-32768, -32768, 32767, 32767, 32767, 32767, 32767, 32767, -32768, 32767};
 
     Conv5x5MaxPool2x2_SW_0(ImageIn,
-        Filter_Layer[0],
-            Bias_Layer[0],
-            Out_Layer[0]);
+                           Filter_Layer[0],
+                           Bias_Layer[0],
+                           Out_Layer[0]);
 
     Conv5x5MaxPool2x2_SW_1(Out_Layer[0],
-            Filter_Layer[1],
-            Bias_Layer[1],
-            Out_Layer[1]);
+                           Filter_Layer[1],
+                           Bias_Layer[1],
+                           Out_Layer[1]);
 
     LinearLayerReLU_1(Out_Layer[1],
-            Filter_Layer[2],
-            Bias_Layer[2],
-            Out_Layer[2]);
+                      Filter_Layer[2],
+                      Bias_Layer[2],
+                      Out_Layer[2]);
+
+    uint32_t *errors = (uint32_t * )
+    arg;
+    *errors = 0;
+//    Out_Layer[2][5]= 30228;
+
+    for (uint8_t i = 0; i < 10; i++) {
+        *errors += (Out_Layer[2][i] != golden[i]);
+        DEBUG_PRINTF("%d, ", Out_Layer[2][i]);
+    }
 
     DEBUG_PRINTF("Cluster: End run Cifar10\n");
 }
 
-void test_cifar10(void)
-{
+void compare_output(int its, uint32_t errors_setup) {
+    int16_t highest = Out_Layer[2][0];
+    uint8_t cls = 0;
+    if (errors_setup != 0) {
+        for (uint8_t i = 0; i < 10; i++) {
+            printf("%d:%d\n", i, Out_Layer[2][i]);
+            if (highest < Out_Layer[2][i]) {
+                highest = Out_Layer[2][i];
+                cls = i;
+            }
+        }
+        printf("cls:%d\n", cls);
+        print_iteration_perf(its);
+
+    }
+//    return digit;
+}
+
+void test_cifar10(void) {
     DEBUG_PRINTF("Entering main controller\n");
     /* Check Results can works when only the output of Layer0 is in L2 */
-    uint8_t CheckResults = 1;
+    uint8_t CheckResults = 0;
 
     /* Output result size. */
     Out_Layer_Size[0] = (14 * 14 * sizeof(int16_t) * 8);
@@ -208,13 +234,12 @@ void test_cifar10(void)
 
 #if !defined(COEF_L2)
     buff = (int16_t *) pmsis_l2_malloc(BUFFER_SIZE);
-    if (buff == NULL)
-    {
+    if (buff == NULL) {
         printf("Buffer alloc failed !\n");
         pmsis_exit(-1);
     }
 
-    #ifdef QSPI_BOARD
+#ifdef QSPI_BOARD
     pi_spiram_conf_init(&conf_ram);
     pi_open_from_conf(&QspiRam, &conf_ram);
     if (pi_ram_open(&QspiRam))
@@ -224,21 +249,19 @@ void test_cifar10(void)
     }
 
     pi_spiflash_conf_init(&conf_flash);
-    #else
+#else
     pi_hyperram_conf_init(&conf_ram);
     pi_open_from_conf(&HyperRam, &conf_ram);
-    if (pi_ram_open(&HyperRam))
-    {
+    if (pi_ram_open(&HyperRam)) {
         printf("Error ram open !\n");
         pmsis_exit(-2);
     }
 
     pi_hyperflash_conf_init(&conf_flash);
-    #endif
+#endif
 
     pi_open_from_conf(&flash, &conf_flash);
-    if (pi_flash_open(&flash))
-    {
+    if (pi_flash_open(&flash)) {
         printf("Error flash open !\n");
         pmsis_exit(-3);
     }
@@ -248,63 +271,58 @@ void test_cifar10(void)
     pi_open_from_conf(&fs, &conf_fs);
 
     int32_t err = pi_fs_mount(&fs);
-    if (err)
-    {
+    if (err) {
         printf("Error FS mounting : %d !\n", err);
         pmsis_exit(-4);
     }
     DEBUG_PRINTF("FS mounted.\n");
 
     CopyFileFromFlashToL3(&fs, "Cifar10_Filter0.dat", &Filter_Layer[0], &Filter_Layer_Size[0]);
-    CopyFileFromFlashToL3(&fs, "Cifar10_Bias0.dat",   &Bias_Layer[0], &Bias_Layer_Size[0]);
+    CopyFileFromFlashToL3(&fs, "Cifar10_Bias0.dat", &Bias_Layer[0], &Bias_Layer_Size[0]);
     CopyFileFromFlashToL3(&fs, "Cifar10_Filter1.dat", &Filter_Layer[1], &Filter_Layer_Size[1]);
-    CopyFileFromFlashToL3(&fs, "Cifar10_Bias1.dat",   &Bias_Layer[1], &Bias_Layer_Size[1]);
+    CopyFileFromFlashToL3(&fs, "Cifar10_Bias1.dat", &Bias_Layer[1], &Bias_Layer_Size[1]);
     CopyFileFromFlashToL3(&fs, "Cifar10_Filter2.dat", &Filter_Layer[2], &Filter_Layer_Size[2]);
-    CopyFileFromFlashToL3(&fs, "Cifar10_Bias2.dat",   &Bias_Layer[2], &Bias_Layer_Size[2]);
+    CopyFileFromFlashToL3(&fs, "Cifar10_Bias2.dat", &Bias_Layer[2], &Bias_Layer_Size[2]);
 
     pi_fs_unmount(&fs);
     DEBUG_PRINTF("FS unmounted.\n");
     pi_flash_close(&flash);
 
-    #ifdef QSPI_BOARD
+#ifdef QSPI_BOARD
     if (pi_ram_alloc(&QspiRam, (uint32_t *) &Out_Layer[0], Out_Layer_Size[0]))
-    #else
-    if (pi_ram_alloc(&HyperRam, (uint32_t *) &Out_Layer[0], Out_Layer_Size[0]))
-    #endif
+#else
+    if (pi_ram_alloc(&HyperRam, (uint32_t * ) & Out_Layer[0], Out_Layer_Size[0]))
+#endif
     {
         printf("Ram malloc failed !\n");
         pmsis_exit(-5);
     }
 #else
-    /* Bias & Filters. */
-    Bias_Layer[0] = Bias_Layer0;
-    Bias_Layer[1] = Bias_Layer1;
-    Bias_Layer[2] = Bias_Layer2;
-    Filter_Layer[0] = Filter_Layer0;
-    Filter_Layer[1] = Filter_Layer1;
-    Filter_Layer[2] = Filter_Layer2;
+        /* Bias & Filters. */
+        Bias_Layer[0] = Bias_Layer0;
+        Bias_Layer[1] = Bias_Layer1;
+        Bias_Layer[2] = Bias_Layer2;
+        Filter_Layer[0] = Filter_Layer0;
+        Filter_Layer[1] = Filter_Layer1;
+        Filter_Layer[2] = Filter_Layer2;
 
-    Out_Layer[0] = (int16_t *) pmsis_l2_malloc(Out_Layer_Size[0]);
-    if (Out_Layer[0] == NULL)
-    {
-        printf("Failed to allocated memory, giving up.\n");
-        pmsis_exit(-5);
-    }
+        Out_Layer[0] = (int16_t *) pmsis_l2_malloc(Out_Layer_Size[0]);
+        if (Out_Layer[0] == NULL)
+        {
+            printf("Failed to allocated memory, giving up.\n");
+            pmsis_exit(-5);
+        }
 #endif  /* COEF_L2 */
-    else
-    {
+    else {
         DEBUG_PRINTF("Allocating Out_Layer0 %d: OK -> %x\n", Out_Layer_Size[0], Out_Layer[0]);
     }
 
     Out_Layer[1] = (int16_t *) pmsis_l2_malloc(Out_Layer_Size[1]);
     Out_Layer[2] = (int16_t *) pmsis_l2_malloc(Out_Layer_Size[2]);
-    if ((Out_Layer[1] == NULL) && (Out_Layer[2] == NULL))
-    {
+    if ((Out_Layer[1] == NULL) && (Out_Layer[2] == NULL)) {
         printf("Failed to allocated memory, giving up.\n");
         pmsis_exit(-5);
-    }
-    else
-    {
+    } else {
         DEBUG_PRINTF("Allocating Out_Layer1 %d: OK -> %x\n", Out_Layer_Size[1], Out_Layer[1]);
         DEBUG_PRINTF("Allocating Out_Layer2 %d: OK -> %x\n", Out_Layer_Size[2], Out_Layer[2]);
     }
@@ -314,46 +332,61 @@ void test_cifar10(void)
     struct pi_cluster_conf cl_conf;
     cl_conf.id = 0;
     pi_open_from_conf(&cluster_dev, (void *) &cl_conf);
-    if (pi_cluster_open(&cluster_dev))
-    {
+    if (pi_cluster_open(&cluster_dev)) {
         printf("Cluster open failed !\n");
         pmsis_exit(-7);
     }
 
     Cifar10_L2_Memory = pmsis_l2_malloc(_Cifar10_L2_Memory_SIZE);
-    if (Cifar10_L2_Memory == NULL)
-    {
+    if (Cifar10_L2_Memory == NULL) {
         printf("L2 Memory Allocation Error! Quit...\n");
         pmsis_exit(-8);
     }
 
     /* Allocate the predetermined memory in the shared L1 memory that the cluster can act on. */
     Cifar10_L1_Memory = pmsis_l1_malloc(_Cifar10_L1_Memory_SIZE);
-    if (Cifar10_L1_Memory == NULL)
-    {
+    if (Cifar10_L1_Memory == NULL) {
         printf("Memory Allocation Error! Quit...\n");
         pmsis_exit(-8);
     }
 
     struct pi_cluster_task *task = pmsis_l2_malloc(sizeof(struct pi_cluster_task));
-    pi_cluster_task(task, RunCifar10, NULL);
-//    task->stack_size = 2048*2;
+//    pi_cluster_task(task, RunCifar10, &errors);
+////    task->stack_size = 2048*2;
+//
+//    pi_cluster_send_task(&cluster_dev, task);
+    start_counters();
+    int its;
+    uint32_t errors = 0;
 
-    pi_cluster_send_task(&cluster_dev, task);
+    for (its = 0; its < 1 && errors == 0; its++) {
+        begin_perf_iteration_i();
+        pi_cluster_task(task, RunCifar10, (void *) &errors);
+        pi_cluster_send_task(&cluster_dev, task);
+        end_perf_iteration_i();
+
+//        if (errors_setup != 0) {
+//            printf("ERROR Recognized number : %d\n", rec_digit);
+//            break;
+//        }
+    }
+    end_counters();
+    compare_output(its, errors);
+
+    //------------------------------------------------------------
 
     pmsis_l1_malloc_free(Cifar10_L1_Memory, _Cifar10_L1_Memory_SIZE);
 
     pi_cluster_close(&cluster_dev);
 
-    if (CheckResults)
-    {
-        printf("L1: ");
-        Check("SW   Layer0", Out_Layer[0], 8, 14, 14);
-        printf("L2: ");
-        Check("SW   Layer1", Out_Layer[1], 12, 5, 5);
-        printf("L3: ");
-        Check("SW   Layer2", Out_Layer[2], 10, 1, 1);
-    }
+//    if (CheckResults) {
+//        printf("L1: ");
+//        Check("SW   Layer0", Out_Layer[0], 8, 14, 14);
+//        printf("L2: ");
+//        Check("SW   Layer1", Out_Layer[1], 12, 5, 5);
+//        printf("L3: ");
+//        Check("SW   Layer2", Out_Layer[2], 10, 1, 1);
+//    }
 
 #if !defined(COEF_L2)
 #ifdef QSPI_BOARD
@@ -366,12 +399,12 @@ void test_cifar10(void)
     pi_ram_close(&QspiRam);
 
 #else
-    for (uint32_t i = 0; i < 3; i++)
-    {
+    for (uint32_t i = 0; i < 3; i++) {
         pi_ram_free(&HyperRam, Filter_Layer[i], Filter_Layer_Size[i]);
         pi_ram_free(&HyperRam, Bias_Layer[i], Bias_Layer_Size[i]);
     }
-    pi_ram_free(&HyperRam, (uint32_t) Out_Layer[0], Out_Layer_Size[0]);
+    pi_ram_free(&HyperRam, (uint32_t)
+    Out_Layer[0], Out_Layer_Size[0]);
     pi_ram_close(&HyperRam);
 #endif
     pmsis_l2_malloc_free(buff, BUFFER_SIZE);
@@ -382,13 +415,14 @@ void test_cifar10(void)
     pmsis_l2_malloc_free(Out_Layer[2], Out_Layer_Size[2]);
 
 
-    printf("Test success\n");
-    pmsis_exit(0);
+//    printf("Test success\n");
+    printf("\nTest %s with %d error(s) !\n", (errors) ? "failed" : "success", errors);
+    if (errors) pmsis_exit(-9);
+    else pmsis_exit(0);
 }
 
-int main(void)
-{
-    printf("\n\n\t *** PMSIS Cifar10 Test ***\n\n");
+int main(void) {
+//    printf("\n\n\t *** PMSIS Cifar10 Test ***\n\n");
     return pmsis_kickoff((void *) test_cifar10);
 }
 

@@ -142,12 +142,12 @@ void run_Bilinear_Resize(void) {
 #if defined(NO_BRIDGE)
     /* check output with golden for regressions. */
     if (errors != 0) {
-        printf("ErrorIt:%d\n", its);
+        printf("EIt:%d\n", its);
         print_iteration_perf(its);
 
         for (uint32_t i = 0; i < (w_out * h_out); i++) {
             if (ImageOut[i] != ImageOut_golden[i]) {
-                printf("Error:[%d]=%d != %d\n", i, ImageOut[i], ImageOut_golden[i]);
+                printf("%u=%d != %d\n", i, ImageOut[i], ImageOut_golden[i]);
 //            errors++;
             }
         }
@@ -158,7 +158,7 @@ void run_Bilinear_Resize(void) {
     WriteImageToFile(OUT_FILE_PATH, cluster_call.Wout, cluster_call.Hout, ImageOut);
 #endif  /* NO_BRIDGE */
 
-    printf("Test %s with %ld error(s) !\n", (errors) ? "failed" : "success", errors);
+    printf("Test %s with %ld error(s)!\n", (errors) ? "failed" : "success", errors);
 
     pmsis_exit(errors);
 }

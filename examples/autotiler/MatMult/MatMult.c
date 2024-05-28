@@ -64,15 +64,16 @@ void run_MatMult(void) {
     if ((M1 == NULL) || (M2 == NULL) || (Out2 == NULL)) { // || (Out1 == NULL) ) {
         printf("Failed to allocate memory for matrix.\n");
         pmsis_exit(-1);
-    } else {
-//        printf("Allocated matrix :\nM1 : %p, %ld  M2 : %p, %ld\n"
-//               "Out1 : %p, %ld  Out2 : %p, %ld\n",
-//               M1, W_M1 * H_M1, M2, W_M2 * H_M2,
-//               Out1, W_Out * H_Out, Out2, W_Out * H_Out);
-        printf("Allocated matrix-M1 : %p, %ld  M2 : %p, %ld Out2 : %p, %ld\n",
-               M1, W_M1 * H_M1, M2, W_M2 * H_M2,
-               Out2, W_Out * H_Out);
     }
+//    else {
+////        printf("Allocated matrix :\nM1 : %p, %ld  M2 : %p, %ld\n"
+////               "Out1 : %p, %ld  Out2 : %p, %ld\n",
+////               M1, W_M1 * H_M1, M2, W_M2 * H_M2,
+////               Out1, W_Out * H_Out, Out2, W_Out * H_Out);
+//        printf("Allocated matrix-M1 : %p, %ld  M2 : %p, %ld Out2 : %p, %ld\n",
+//               M1, W_M1 * H_M1, M2, W_M2 * H_M2,
+//               Out2, W_Out * H_Out);
+//    }
 
 //    for (uint32_t i = 0; i < (W_M1 * H_M1); i++) {
 //        M1[i] = i + 1;
@@ -144,14 +145,14 @@ void run_MatMult(void) {
     end_counters();
 
     if (errors) {
-        printf("ErrorIt:%d\n", its);
+        printf("EIt:%d\n", its);
         print_iteration_perf(its);
 
         //    Logging the differences of the last iteration
         for (uint32_t i = 0; i < H_Out; i++) {
             for (uint32_t j = 0; j < W_Out; j++) {
                 if (Out2[i * W_Out + j] != golden) {
-                    printf("Error:[%ld,%ld]=%d != %d\n", i, j, Out2[i * W_Out + j], golden);
+                    printf("%u,%u=%d != %d\n", i, j, Out2[i * W_Out + j], golden);
                 }
             }
         }
@@ -166,7 +167,7 @@ void run_MatMult(void) {
     //    pi_l2_free(Out1, W_Out * H_Out * sizeof(short int));
     pi_l2_free(Out2, W_Out * H_Out * sizeof(short int));
 
-    printf("Test %s with %ld error(s) !\n", (errors) ? "failed" : "success", errors);
+    printf("Test %s with %ld error(s)!\n", (errors) ? "failed" : "success", errors);
     pmsis_exit(errors);
 }
 
